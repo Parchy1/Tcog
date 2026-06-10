@@ -57,7 +57,7 @@ var UI = {
     gid('tb-logo').style.background = 'linear-gradient(135deg,' + c.col1 + ',' + c.col2 + ')';
     gid('tb-club-name').textContent = c.full;
     if (G.sacked) { this.nav('sacked'); return; }
-    if (!G.curFix && !G.endProcessed) advanceWorld();
+    if (!G.curFix && !G.endProcessed) { if (advanceWorld()) autoPickXI(); }
     this.nav(G.curFix ? 'hub' : 'end');
   },
   darken(hex) {
@@ -122,6 +122,13 @@ var UI = {
 
   /* ═════════ HUB ═════════ */
   renderHub() {
+    // If a match was finalized but the user left the result screen via the
+    // sidebar, the world hasn't advanced yet — do it here so the hub never
+    // mistakes "between fixtures" for "season over".
+    if (!G.curFix && (!M || M.finished) && !G.endProcessed && !G.sacked) {
+      M = null;
+      if (advanceWorld()) autoPickXI();
+    }
     gid('hub-sub').textContent = 'Season ' + G.season + ' · ' + G.manager + ' · ' + userClub().full;
     gid('h-pts').textContent = G.pts;
     const played = G.plW + G.plD + G.plL;
@@ -197,7 +204,11 @@ var UI = {
   },
   continueToMatch() {
     if (M && !M.finished) { this.nav('match'); return; }
-    if (!G.curFix) { this.nav('end'); return; }
+    if (!G.curFix) {
+      M = null;
+      if (advanceWorld()) { autoPickXI(); this.nav('hub'); return; }
+      this.nav('end'); return;
+    }
     this.nav('lineup');
   },
 
@@ -326,6 +337,8 @@ var UI = {
     });
   },
   preMatch() {
+    if (M && !M.finished) { this.nav('match'); return; }
+    if (!G.curFix) { this.nav('hub'); return; }
     for (let i = 0; i < 11; i++) {
       if (G.xi[i] === null) { toast('Fill all 11 positions!'); return; }
       const p = playerById(G.xi[i]);
@@ -593,9 +606,10 @@ var UI = {
   afterMatch() {
     M = null;
     if (G.sacked) { saveGame(); this.nav('sacked'); return; }
-    const fix = advanceWorld();
-    if (!fix) { this.nav('end'); return; }
-    autoPickXI();
+    if (!G.curFix) {
+      if (!advanceWorld()) { this.nav('end'); return; }
+      autoPickXI();
+    }
     this.nav('hub');
   },
 

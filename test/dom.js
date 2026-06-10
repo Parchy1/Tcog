@@ -102,10 +102,16 @@ function assert(cond, msg) { if (!cond) { failures++; console.error('  ✗ FAIL:
   const others = Object.keys(w.G.table).filter(k => k !== 'NEW');
   assert(others.every(k => w.G.table[k].p === 1), 'whole round simulated');
 
-  // continue to next fixture
-  w.UI.afterMatch();
+  // leave the result screen via the sidebar (regression: this used to make
+  // the hub think the season was over after the first match)
+  w.UI.nav('table');
+  w.UI.nav('hub');
   assert(w.UI.page === 'hub', 'back at hub');
-  assert(w.G.curFix, 'next fixture queued: ' + (w.G.curFix && w.G.curFix.comp + ' vs ' + w.G.curFix.opp));
+  assert(w.G.curFix, 'next fixture queued after sidebar detour: ' + (w.G.curFix && w.G.curFix.comp + ' vs ' + w.G.curFix.opp));
+  assert(w.document.getElementById('h-matchline').textContent.indexOf('Season complete') < 0, 'hub does not claim season complete');
+  w.UI.continueToMatch();
+  assert(w.UI.page === 'lineup', 'continue goes to lineup, not season review');
+  w.UI.nav('hub');
 
   // save/load via UI
   w.UI.quitToMenu();

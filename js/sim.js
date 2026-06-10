@@ -119,35 +119,41 @@ function injurePlayer(p, contextLabel) {
 
 /* ── AI transfer activity during windows ─────────────────────── */
 function runAITransfers() {
-  if (G.aiWindowDone || !inWindow()) return;
-  G.aiWindowDone = true;
-  // foreign stars move between big clubs
-  const stars = Object.values(PLAYERS).filter(p => p.foreign && !p._moved);
-  shuffle(stars).slice(0, rnd(1, 3)).forEach(p => {
-    const buyers = ['Real Madrid', 'Barcelona', 'Bayern Munich', 'PSG', 'Inter Milan', 'Juventus'].filter(c => c !== p.clubName);
-    p._moved = true; const to = pick(buyers);
-    addInbox('💰', to + ' sign ' + p.n + ' from ' + p.clubName + ' for ' + money(Math.round(p.val * rndf(0.9, 1.3))) + '.', 'transfer');
-    p.clubName = to;
-  });
-  // PL clubs trade among themselves
-  for (let i = 0; i < rnd(1, 2); i++) {
-    const sellers = CLUBS.filter(c => c.key !== G.club);
-    const from = pick(sellers);
-    const cands = squadOf(from.key).filter(p => p.r >= 78 && p.r <= 88);
-    if (!cands.length) continue;
-    const p = pick(cands);
-    const to = pick(CLUBS.filter(c => c.key !== from.key && c.key !== G.club && c.str >= from.str - 6));
-    p.club = to.key;
-    addInbox('🔁', to.name + ' sign ' + p.n + ' from ' + from.name + ' for ' + money(Math.round(p.val * rndf(0.95, 1.25))) + '.', 'transfer');
+  if (!inWindow()) return;
+  if (!G.aiWindowDone) {
+    G.aiWindowDone = true;
+    // foreign stars move between big clubs
+    const stars = Object.values(PLAYERS).filter(p => p.foreign && !p._moved);
+    shuffle(stars).slice(0, rnd(1, 3)).forEach(p => {
+      const buyers = ['Real Madrid', 'Barcelona', 'Bayern Munich', 'PSG', 'Inter Milan', 'Juventus'].filter(c => c !== p.clubName);
+      p._moved = true; const to = pick(buyers);
+      addInbox('💰', to + ' sign ' + p.n + ' from ' + p.clubName + ' for ' + money(Math.round(p.val * rndf(0.9, 1.3))) + '.', 'transfer');
+      p.clubName = to;
+    });
+    // PL clubs trade among themselves
+    for (let i = 0; i < rnd(1, 2); i++) {
+      const sellers = CLUBS.filter(c => c.key !== G.club);
+      const from = pick(sellers);
+      const cands = squadOf(from.key).filter(p => p.r >= 78 && p.r <= 88);
+      if (!cands.length) continue;
+      const p = pick(cands);
+      const to = pick(CLUBS.filter(c => c.key !== from.key && c.key !== G.club && c.str >= from.str - 6));
+      p.club = to.key;
+      addInbox('🔁', to.name + ' sign ' + p.n + ' from ' + from.name + ' for ' + money(Math.round(p.val * rndf(0.95, 1.25))) + '.', 'transfer');
+    }
   }
-  // maybe an incoming bid for one of the user's players
-  if (Math.random() < 0.45) generateIncomingBid();
+  // incoming bids can arrive any week while the window is open;
+  // transfer-listed players attract attention much faster
+  if (!G.pendingOffer) {
+    const hasListed = userSquad().some(p => p.listed && !p.injured);
+    if (Math.random() < (hasListed ? 0.6 : 0.25)) generateIncomingBid();
+  }
 }
 
 function generateIncomingBid() {
-  const targets = userSquad().filter(p => p.val >= 10 && !p.injured);
+  const targets = userSquad().filter(p => !p.injured && (p.listed || p.val >= 10));
   if (!targets.length) return;
-  const weights = targets.map(p => (p.listed ? 4 : 1) * (p.contract <= 1 ? 2 : 1));
+  const weights = targets.map(p => (p.listed ? 10 : 1) * (p.contract <= 1 ? 2 : 1));
   const total = weights.reduce((s, w) => s + w, 0);
   let r = Math.random() * total, target = targets[0];
   for (let i = 0; i < targets.length; i++) { r -= weights[i]; if (r <= 0) { target = targets[i]; break; } }
