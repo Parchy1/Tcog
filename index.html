@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Touchline Manager 25/26</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<!-- ══════════════ SETUP / NEW GAME ══════════════ -->
+<div class="setup" id="pg-setup">
+  <div class="setup-inner">
+    <div class="setup-logo">⚽ TOUCHLINE MANAGER <span>25/26</span></div>
+    <div class="setup-sub">Pick your club. Meet the board's expectations. Win it all.</div>
+    <div class="setup-row">
+      <input type="text" id="su-name" placeholder="Your manager name" maxlength="24">
+      <button class="btn pri" id="su-continue" onclick="UI.confirmNewGame()" disabled>Start Career ▶</button>
+      <button class="btn gold-b" id="su-resume" style="display:none" onclick="UI.resumeGame()">Resume Save ▶</button>
+    </div>
+    <div class="club-grid" id="su-clubs"></div>
+  </div>
+</div>
+
+<div class="app" id="app" style="display:none">
+
+<!-- ══════════════ TOPBAR ══════════════ -->
+<div class="topbar">
+  <div class="tb-logo" id="tb-logo">TM</div>
+  <div class="tb-club">
+    <div class="tb-club-name" id="tb-club-name">—</div>
+    <div class="tb-club-sub" id="tb-date">—</div>
+  </div>
+  <div class="tb-stats">
+    <div class="tb-stat" onclick="UI.nav('table')">
+      <div class="tb-stat-v tb-pos" id="tb-pos">—</div>
+      <div class="tb-stat-l">Position</div>
+    </div>
+    <div class="tb-stat">
+      <div class="tb-stat-v tb-pts" id="tb-pts">0</div>
+      <div class="tb-stat-l">PL Points</div>
+    </div>
+    <div class="tb-stat" onclick="UI.nav('transfers')">
+      <div class="tb-stat-v tb-bud" id="tb-bud">—</div>
+      <div class="tb-stat-l">Budget</div>
+    </div>
+    <div class="tb-stat">
+      <div class="tb-stat-v" style="color:var(--text2)" id="tb-gd">+0</div>
+      <div class="tb-stat-l">Goal Diff</div>
+    </div>
+    <div class="tb-stat" onclick="UI.nav('europe')">
+      <div class="tb-stat-v" id="tb-euro" style="color:var(--gold);font-size:11px">—</div>
+      <div class="tb-stat-l">Europe</div>
+    </div>
+  </div>
+  <div class="tb-right">
+    <div id="tb-window"></div>
+    <div class="tb-inbox" id="tb-inbox-btn" onclick="UI.nav('inbox')">📬<div class="tb-unread" id="tb-unread">0</div></div>
+    <div>
+      <div class="tb-morale" id="tb-morale">😐</div>
+      <div class="tb-stat-l" style="text-align:center">Morale</div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════ SIDEBAR ══════════════ -->
+<div class="sidebar">
+  <div class="sb-section">Main</div>
+  <button class="sb-btn on" id="sb-hub" onclick="UI.nav('hub')"><span class="sb-icon">🏠</span>Hub</button>
+  <button class="sb-btn" id="sb-fixtures" onclick="UI.nav('fixtures')"><span class="sb-icon">📅</span>Fixtures</button>
+  <button class="sb-btn" id="sb-table" onclick="UI.nav('table')"><span class="sb-icon">📊</span>League</button>
+  <button class="sb-btn" id="sb-inbox" onclick="UI.nav('inbox')"><span class="sb-icon">📬</span>Inbox<span class="sb-badge" id="sb-badge">0</span></button>
+  <div class="sb-section">Team</div>
+  <button class="sb-btn" id="sb-squad" onclick="UI.nav('squad')"><span class="sb-icon">👥</span>Squad</button>
+  <button class="sb-btn" id="sb-lineup" onclick="UI.nav('lineup')"><span class="sb-icon">⚽</span>Lineup</button>
+  <button class="sb-btn" id="sb-tactics" onclick="UI.nav('tactics')"><span class="sb-icon">⚙️</span>Tactics</button>
+  <button class="sb-btn" id="sb-training" onclick="UI.nav('training')"><span class="sb-icon">🏃</span>Training</button>
+  <div class="sb-section">Club</div>
+  <button class="sb-btn" id="sb-transfers" onclick="UI.nav('transfers')"><span class="sb-icon">🔄</span>Transfers</button>
+  <button class="sb-btn" id="sb-europe" onclick="UI.nav('europe')"><span class="sb-icon">⭐</span>Europe</button>
+  <button class="sb-btn" id="sb-cups" onclick="UI.nav('cups')"><span class="sb-icon">🏆</span>Domestic Cups</button>
+  <div style="margin-top:auto;padding:8px 4px 4px">
+    <div class="sb-section" style="padding:0 4px 4px">Recent Form</div>
+    <div class="sb-form" id="sb-form"></div>
+    <button class="sb-btn" style="margin-top:6px" onclick="UI.quitToMenu()"><span class="sb-icon">💾</span>Save &amp; Menu</button>
+  </div>
+</div>
+
+<!-- ══════════════ MAIN AREA ══════════════ -->
+<div class="main-area">
+<div class="toast" id="toast"></div>
+
+<!-- ── HUB ── -->
+<div class="page on" id="pg-hub">
+  <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px">
+    <div>
+      <h2 style="font-size:20px;font-weight:700;margin-bottom:2px">Dashboard</h2>
+      <div style="font-size:12px;color:var(--text2)" id="hub-sub"></div>
+    </div>
+    <button class="btn pri" style="font-size:13px;padding:10px 22px" id="hub-continue" onclick="UI.continueToMatch()">Continue ▶</button>
+  </div>
+  <div class="kpi-row">
+    <div class="kpi"><div class="kpi-v tb-pts" id="h-pts">0</div><div class="kpi-l">PL Points</div></div>
+    <div class="kpi"><div class="kpi-v tb-pos" id="h-pos">—</div><div class="kpi-l">Position</div></div>
+    <div class="kpi"><div class="kpi-v" style="color:var(--text2)" id="h-wdl">0-0-0</div><div class="kpi-l">W-D-L</div></div>
+    <div class="kpi"><div class="kpi-v tb-bud" id="h-bud">—</div><div class="kpi-l">Budget</div></div>
+    <div class="kpi"><div class="kpi-v" style="color:var(--gold)" id="h-conf">65</div><div class="kpi-l">Board Conf.</div></div>
+  </div>
+  <div class="hub-grid">
+    <div>
+      <div class="card gold" id="hub-fix">
+        <div class="card-title">Next Match</div>
+        <div style="display:flex;align-items:center;justify-content:space-between">
+          <div>
+            <div style="font-size:11px;color:var(--text2);margin-bottom:4px" id="h-comp"></div>
+            <div style="font-size:17px;font-weight:700;margin-bottom:4px" id="h-matchline">—</div>
+            <div style="font-size:11px;color:var(--text2)" id="h-venue"></div>
+            <div style="font-size:11px;color:var(--text2)" id="h-matchdate"></div>
+            <div style="font-size:11px;color:var(--gold);margin-top:4px" id="h-oppform"></div>
+          </div>
+          <button class="btn pri" style="font-size:13px;padding:10px 20px" id="hub-play-btn" onclick="UI.nav('lineup')">Pick XI ▶</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">Board Objectives</div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+          <span style="font-size:12px">Target: <strong id="h-target"></strong></span>
+          <span style="font-size:11px;color:var(--text2)" id="h-board-mood"></span>
+        </div>
+        <div class="board-bar"><div class="board-fill" id="h-board-fill" style="width:65%"></div></div>
+        <div style="font-size:10px;color:var(--text2)" id="h-board-note"></div>
+      </div>
+      <div id="hub-comps"></div>
+    </div>
+    <div>
+      <div class="card">
+        <div class="card-title">Treatment &amp; Suspensions</div>
+        <div id="hub-injuries"></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Recent Results</div>
+        <div id="hub-results"></div>
+      </div>
+    </div>
+    <div>
+      <div class="card">
+        <div class="card-title">Latest News</div>
+        <div id="hub-news"></div>
+      </div>
+      <div id="hub-offer-card"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ── LINEUP ── -->
+<div class="page" id="pg-lineup">
+  <h2 style="font-size:18px;font-weight:700;margin-bottom:16px">Pick Lineup</h2>
+  <div class="g2" style="gap:20px;align-items:start">
+    <div>
+      <div class="field-label">Formation</div>
+      <select id="lu-fm" onchange="UI.changeFormation()" style="width:200px;margin-bottom:12px">
+        <option value="433">4-3-3</option><option value="4231">4-2-3-1</option>
+        <option value="442">4-4-2</option><option value="4411">4-4-1-1</option>
+        <option value="343">3-4-3</option><option value="352">3-5-2</option>
+        <option value="41410">4-1-4-1</option><option value="532">5-3-2</option>
+        <option value="541">5-4-1</option><option value="4222">4-2-2-2</option>
+        <option value="451">4-5-1</option><option value="3412">3-4-1-2</option>
+      </select>
+      <div class="pitch-static" id="pitch-container"></div>
+      <div class="btn-row" style="margin-top:10px">
+        <button class="btn" onclick="UI.autoFill()">⚡ Auto-pick XI</button>
+        <button class="btn pri" id="lu-go" onclick="UI.preMatch()">Pre-Match Press ▶</button>
+      </div>
+    </div>
+    <div>
+      <div class="card" id="pk-panel" style="display:none">
+        <div class="card-title" id="pk-lbl">Pick Player</div>
+        <div id="pk-list" style="max-height:300px;overflow-y:auto"></div>
+        <button class="btn full" style="margin-top:8px" onclick="UI.closePicker()">Cancel</button>
+      </div>
+      <div class="card" id="bench-panel">
+        <div class="card-title">Bench (up to 9)</div>
+        <div id="bench-list"></div>
+        <div id="bench-add"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── PRE-MATCH PRESS ── -->
+<div class="page" id="pg-prepress">
+  <h2 style="font-size:18px;font-weight:700;margin-bottom:4px">Pre-Match Press Conference</h2>
+  <div style="font-size:12px;color:var(--text2);margin-bottom:16px" id="pp-fixture"></div>
+  <div style="max-width:600px">
+    <div id="pp-questions"></div>
+    <button class="btn" style="margin-top:8px" onclick="UI.skipPress()">Skip press conference</button>
+    <button class="btn pri" id="pp-done" style="display:none;margin-top:8px" onclick="UI.startMatch()">Done — Kick Off ▶</button>
+  </div>
+</div>
+
+<!-- ── MATCH ── -->
+<div class="page" id="pg-match">
+  <div class="match-layout">
+    <div>
+      <div class="match-scoreline">
+        <div><div class="match-team" id="m-home">—</div></div>
+        <div style="text-align:center">
+          <div class="match-score" id="m-score">0 — 0</div>
+          <div style="font-size:10px;color:var(--text2);margin-top:2px" id="m-scorers-inline"></div>
+        </div>
+        <div style="text-align:right">
+          <div class="match-team" id="m-away">—</div>
+          <div style="font-size:11px;color:var(--text2)" id="m-min">0'</div>
+        </div>
+      </div>
+      <div class="pitch-wrap" style="margin-bottom:10px">
+        <canvas id="pitch-canvas" style="width:100%;display:block"></canvas>
+      </div>
+      <div class="highlight-banner" id="highlight-banner">Match in progress...</div>
+      <div class="shout-row">
+        <button class="shout-btn" onclick="UI.shout('encourage')">💪 Encourage</button>
+        <button class="shout-btn" onclick="UI.shout('demand')">🔥 Demand More</button>
+        <button class="shout-btn" onclick="UI.shout('calm')">✋ Calm Down</button>
+        <button class="shout-btn" onclick="UI.shout('tactics')">🎯 Tactics</button>
+        <button class="shout-btn" onclick="UI.shout('express')">🌟 Express</button>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
+        <span style="font-size:11px;color:var(--text2)">Speed:</span>
+        <div class="speed-btns">
+          <button id="btn-spd1" class="spd-btn on" onclick="UI.setSpeed(1)">1x</button>
+          <button id="btn-spd2" class="spd-btn" onclick="UI.setSpeed(2)">2x</button>
+          <button id="btn-spd4" class="spd-btn" onclick="UI.setSpeed(4)">4x</button>
+          <button id="btn-spd8" class="spd-btn" onclick="UI.setSpeed(8)">8x</button>
+        </div>
+        <div style="margin-left:auto;display:flex;gap:8px">
+          <button class="btn" id="btn-pause" onclick="UI.togglePause()">⏸ Pause</button>
+          <button class="btn warn" onclick="UI.nav('subs')">🔄 Subs</button>
+          <button class="btn dan" id="btn-ft" onclick="UI.fullTime()" disabled>Full Time</button>
+        </div>
+      </div>
+    </div>
+    <div>
+      <div class="card" style="margin-bottom:10px">
+        <div class="card-title" id="m-comp">—</div>
+        <div style="font-size:11px;color:var(--text2);margin-bottom:8px" id="m-venue"></div>
+        <div class="match-stats">
+          <div class="mstat"><div class="mstat-v" id="m-shots">0-0</div><div class="mstat-l">Shots</div></div>
+          <div class="mstat"><div class="mstat-v" id="m-xg">0.0-0.0</div><div class="mstat-l">xG</div></div>
+          <div class="mstat"><div class="mstat-v" id="m-poss">50%</div><div class="mstat-l">Poss</div></div>
+        </div>
+        <div style="font-size:11px;color:var(--text2)">Cards: <span id="m-cards">0Y 0R</span> &nbsp;|&nbsp; Subs: <span id="m-subs">0/5</span></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Match Commentary</div>
+        <div class="match-log" id="mlog"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── SUBS ── -->
+<div class="page" id="pg-subs">
+  <h2 style="font-size:18px;font-weight:700;margin-bottom:4px">Substitutions</h2>
+  <div style="font-size:12px;color:var(--text2);margin-bottom:16px"><span id="sub-left">5 left</span> — Step 1: tap who comes OFF &nbsp;▸&nbsp; Step 2: tap who comes ON</div>
+  <div class="g2" style="gap:16px;max-width:760px">
+    <div class="card"><div class="card-title">On the Pitch</div><div id="sub-off"></div></div>
+    <div class="card"><div class="card-title" id="sub-on-sec">Bench</div><div id="sub-on"></div></div>
+  </div>
+  <button class="btn" style="margin-top:12px" onclick="UI.nav('match')">← Back to Match</button>
+</div>
+
+<!-- ── HALF TIME ── -->
+<div class="page" id="pg-halftime">
+  <h2 style="font-size:18px;font-weight:700;margin-bottom:16px">Half Time</h2>
+  <div class="g2" style="gap:16px;max-width:760px">
+    <div>
+      <div class="card gold" style="text-align:center;padding:20px">
+        <div style="font-size:32px;font-weight:800;margin-bottom:4px" id="ht-score">0 — 0</div>
+        <div style="font-size:12px;color:var(--text2)" id="ht-scorers"></div>
+      </div>
+      <div class="card"><div class="card-title">Team Talk</div><div id="ht-talks"></div></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Make Changes</div>
+      <p style="font-size:12px;color:var(--text2);margin-bottom:10px">Adjust before the second half.</p>
+      <button class="btn full" onclick="UI.nav('subs')">🔄 Substitutions</button>
+      <button class="btn full" onclick="UI.nav('tactics')">⚙️ Tactics</button>
+      <button class="btn pri full" style="margin-top:8px" onclick="UI.resumeSecondHalf()">▶ Start 2nd Half</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── RESULT ── -->
+<div class="page" id="pg-result">
+  <h2 style="font-size:18px;font-weight:700;margin-bottom:16px">Full Time</h2>
+  <div class="g2" style="gap:16px;max-width:760px">
+    <div>
+      <div class="card" style="text-align:center;padding:24px">
+        <div style="font-size:12px;color:var(--text2);margin-bottom:4px" id="r-comp"></div>
+        <div style="font-size:14px;font-weight:600;margin-bottom:8px" id="r-line"></div>
+        <div style="font-size:42px;font-weight:800;letter-spacing:6px;margin-bottom:4px" id="r-score"></div>
+        <div style="font-size:11px;color:var(--gold);margin-bottom:8px" id="r-note"></div>
+        <div style="font-size:12px;color:var(--text2)" id="r-scorers"></div>
+      </div>
+      <div class="g3" style="gap:8px">
+        <div class="mstat card" style="padding:12px;margin:0"><div class="mstat-v" id="r-shots">0-0</div><div class="mstat-l">Shots</div></div>
+        <div class="mstat card" style="padding:12px;margin:0"><div class="mstat-v" id="r-poss">50</div><div class="mstat-l">Poss %</div></div>
+        <div class="mstat card" style="padding:12px;margin:0"><div class="mstat-v" id="r-xg">0.0</div><div class="mstat-l">xG</div></div>
+      </div>
+    </div>
+    <div>
+      <div class="card"><div class="card-title">Player Ratings</div><div id="r-ratings" style="max-height:260px;overflow-y:auto"></div></div>
+      <button class="btn full" onclick="UI.postPress()">📰 Post-Match Press</button>
+      <button class="btn pri full" style="margin-top:6px" onclick="UI.afterMatch()">Continue ▶</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── POST PRESS ── -->
+<div class="page" id="pg-postpress">
+  <h2 style="font-size:18px;font-weight:700;margin-bottom:4px">Post-Match Press Conference</h2>
+  <div style="font-size:12px;color:var(--text2);margin-bottom:16px" id="post-result-label"></div>
+  <div style="max-width:600px">
+    <div id="post-questions"></div>
+    <button class="btn pri" id="post-done" style="display:none;margin-top:8px" onclick="UI.afterMatch()">Continue ▶</button>
+  </div>
+</div>
+
+<!-- ── SQUAD ── -->
+<div class="page" id="pg-squad">
+  <h2 style="font-size:18px;font-weight:700;margin-bottom:16px">Squad Management</h2>
+  <div class="tabs">
+    <div class="tab on" id="sq-t-players" onclick="UI.sqTab('players')">Players</div>
+    <div class="tab" id="sq-t-stats" onclick="UI.sqTab('stats')">Statistics</div>
+    <div class="tab" id="sq-t-injuries" onclick="UI.sqTab('injuries')">Unavailable</div>
+    <div class="tab" id="sq-t-contracts" onclick="UI.sqTab('contracts')">Contracts</div>
+  </div>
+  <div id="sq-content"></div>
+</div>
+
+<!-- ── TACTICS ── -->
+<div class="page" id="pg-tactics">
+  <h2 style="font-size:18px;font-weight:700;margin-bottom:16px">Tactics</h2>
+  <div class="g2" style="gap:20px;max-width:820px;align-items:start">
+    <div>
+      <div class="card">
+        <div class="card-title">Mentality &amp; Style</div>
+        <div class="field-label">Mentality</div>
+        <select id="t-men"><option value="att">Attacking</option><option value="bal" selected>Balanced</option><option value="def">Defensive</option><option value="ctr">Counter-Attack</option><option value="pos">Possession</option></select>
+        <div class="field-label">Playing Style</div>
+        <select id="t-style"><option value="direct">Direct Play</option><option value="tiki">Tiki-Taka</option><option value="press">High Press</option><option value="long">Long Ball</option><option value="wing">Wing Play</option></select>
+      </div>
+      <div class="card">
+        <div class="card-title">Sliders</div>
+        <div class="field-label">Pressing Intensity &nbsp;<span id="t-pv" style="color:var(--text)">7</span></div>
+        <input type="range" min="1" max="10" value="7" id="t-press" oninput="document.getElementById('t-pv').textContent=this.value">
+        <div class="field-label" style="margin-top:10px">Defensive Line &nbsp;<span id="t-lv" style="color:var(--text)">6</span></div>
+        <input type="range" min="1" max="10" value="6" id="t-line" oninput="document.getElementById('t-lv').textContent=this.value">
+        <div class="field-label" style="margin-top:10px">Width &nbsp;<span id="t-wv" style="color:var(--text)">6</span></div>
+        <input type="range" min="1" max="10" value="6" id="t-width" oninput="document.getElementById('t-wv').textContent=this.value">
+        <button class="btn suc full" style="margin-top:14px" onclick="UI.saveTactics()">Save Tactics ✓</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Team Instructions <span style="font-size:10px;font-weight:400;color:var(--text2)">(max 3, each adds a small boost)</span></div>
+      <div id="t-instrs"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ── TRANSFERS ── -->
+<div class="page" id="pg-transfers">
+  <h2 style="font-size:18px;font-weight:700;margin-bottom:4px">Transfer Centre</h2>
+  <div style="font-size:12px;color:var(--text2);margin-bottom:12px" id="tr-status"></div>
+  <div class="tabs">
+    <div class="tab on" id="tr-t-buy" onclick="UI.trTab('buy')">Sign Players</div>
+    <div class="tab" id="tr-t-free" onclick="UI.trTab('free')">Free Agents</div>
+    <div class="tab" id="tr-t-sell" onclick="UI.trTab('sell')">Sell / Loan</div>
+  </div>
+  <div id="tr-content"></div>
+</div>
+
+<!-- ── TRAINING ── -->
+<div class="page" id="pg-training">
+  <h2 style="font-size:18px;font-weight:700;margin-bottom:16px">Training</h2>
+  <div class="g2" style="gap:16px;align-items:start;max-width:820px">
+    <div class="card">
+      <div class="card-title">Weekly Training Focus</div>
+      <p style="font-size:11px;color:var(--text2);margin-bottom:12px">Choose what the squad trains. Affects the next match.</p>
+      <div id="training-opts"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Individual Development <span style="font-size:10px;font-weight:400;color:var(--text2)">(up to 3 players)</span></div>
+      <p style="font-size:11px;color:var(--text2);margin-bottom:10px">Focused coaching for players with growth potential. Boosts weekly and end-of-season development.</p>
+      <div id="training-individual"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ── FIXTURES ── -->
+<div class="page" id="pg-fixtures">
+  <h2 style="font-size:18px;font-weight:700;margin-bottom:16px">Fixtures &amp; Results</h2>
+  <div style="max-width:720px"><div id="fixtures-list"></div></div>
+</div>
+
+<!-- ── TABLE ── -->
+<div class="page" id="pg-table">
+  <h2 style="font-size:18px;font-weight:700;margin-bottom:16px">Premier League</h2>
+  <div class="tabs">
+    <div class="tab on" id="tbl-t-pl" onclick="UI.tblTab('pl')">Table</div>
+    <div class="tab" id="tbl-t-scorers" onclick="UI.tblTab('scorers')">Top Scorers</div>
+    <div class="tab" id="tbl-t-results" onclick="UI.tblTab('results')">Latest Results</div>
+  </div>
+  <div style="max-width:760px"><div id="table-content"></div></div>
+</div>
+
+<!-- ── EUROPE ── -->
+<div class="page" id="pg-europe">
+  <h2 style="font-size:18px;font-weight:700;margin-bottom:16px" id="eu-title">Europe</h2>
+  <div id="europe-content" style="max-width:760px"></div>
+</div>
+
+<!-- ── CUPS ── -->
+<div class="page" id="pg-cups">
+  <h2 style="font-size:18px;font-weight:700;margin-bottom:16px">Domestic Cups</h2>
+  <div class="g2" style="gap:16px;max-width:820px;align-items:start" id="cups-content"></div>
+</div>
+
+<!-- ── INBOX ── -->
+<div class="page" id="pg-inbox">
+  <h2 style="font-size:18px;font-weight:700;margin-bottom:16px">Inbox</h2>
+  <div style="max-width:640px"><div id="inbox-content"></div></div>
+</div>
+
+<!-- ── SEASON END ── -->
+<div class="page" id="pg-end">
+  <h2 style="font-size:18px;font-weight:700;margin-bottom:16px">Season Review</h2>
+  <div style="max-width:760px">
+    <div id="end-content"></div>
+    <button class="btn pri" style="margin-top:16px;padding:10px 28px;font-size:14px" onclick="UI.newSeason()">Start Next Season ▶</button>
+  </div>
+</div>
+
+<!-- ── SACKED ── -->
+<div class="page" id="pg-sacked">
+  <div style="max-width:560px;margin:60px auto;text-align:center">
+    <div style="font-size:56px;margin-bottom:12px">📉</div>
+    <h2 style="font-size:24px;font-weight:800;margin-bottom:8px;color:var(--red)">SACKED</h2>
+    <div id="sacked-content" style="font-size:13px;color:var(--text2);line-height:1.8;margin-bottom:20px"></div>
+    <button class="btn pri" style="padding:10px 28px;font-size:14px" onclick="UI.backToMenu()">Start a New Career ▶</button>
+  </div>
+</div>
+
+</div><!-- /main-area -->
+</div><!-- /app -->
+
+<!-- ══════════════ MODALS ══════════════ -->
+<div class="overlay" id="mod-player">
+  <div class="modal">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px">
+      <div><div class="modal-title" id="mod-pl-name"></div><div class="modal-sub" id="mod-pl-info"></div></div>
+      <button class="btn sm" onclick="UI.closeModal('mod-player')">✕</button>
+    </div>
+    <div id="mod-pl-attrs"></div>
+    <div id="mod-pl-extra" style="margin-top:12px"></div>
+  </div>
+</div>
+
+<div class="overlay" id="mod-neg">
+  <div class="modal">
+    <div class="modal-title" id="neg-name"></div>
+    <div class="modal-sub" id="neg-info"></div>
+    <div id="neg-body"></div>
+    <div class="modal-footer" id="neg-footer"></div>
+  </div>
+</div>
+
+<div class="overlay" id="mod-offer">
+  <div class="modal">
+    <div class="modal-title" id="offer-title"></div>
+    <div class="modal-sub" id="offer-body"></div>
+    <div class="modal-footer">
+      <button class="btn dan" onclick="UI.rejectOffer()">Reject</button>
+      <button class="btn suc" onclick="UI.acceptOffer()">Accept ✓</button>
+    </div>
+  </div>
+</div>
+
+<script src="js/util.js"></script>
+<script src="js/data.js"></script>
+<script src="js/core.js"></script>
+<script src="js/sim.js"></script>
+<script src="js/match.js"></script>
+<script src="js/pitch.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>
