@@ -18,15 +18,15 @@ function buildOppXI(fix) {
         const s = p.r * (1 - fi * 0.06);
         if (s > score) { score = s; best = p; }
       });
-      if (best) { used[best.id] = true; xi.push({ pid: best.id, n: best.n, p: slot, r: best.r, sho: best.sho }); }
-      else xi.push({ n: pick(LAST_NAMES), p: slot, r: fix.str - rnd(2, 8), sho: fix.str - rnd(5, 15) });
+      if (best) { used[best.id] = true; xi.push({ pid: best.id, n: best.n, p: slot, r: best.r, sho: best.sho, pac: best.pac }); }
+      else xi.push({ n: pick(LAST_NAMES), p: slot, r: fix.str - rnd(2, 8), sho: fix.str - rnd(5, 15), pac: fix.str - rnd(0, 10) });
     });
     return xi;
   }
   // generated XI for European / lower-league opponents
   return slots.map(slot => {
     const r = clamp(fix.str + rnd(-6, 5), 40, 97);
-    return { n: pick(LAST_NAMES), p: slot, r: r, sho: slot === 'ST' ? r + 2 : ['LW', 'RW', 'AM'].indexOf(slot) >= 0 ? r - 2 : r - 20 };
+    return { n: pick(LAST_NAMES), p: slot, r: r, sho: slot === 'ST' ? r + 2 : ['LW', 'RW', 'AM'].indexOf(slot) >= 0 ? r - 2 : r - 20, pac: clamp(r + rnd(-5, 8), 30, 97) };
   });
 }
 
@@ -46,7 +46,8 @@ function calcUserAtk() {
   let sum = 0;
   pls.forEach(p => {
     const f = M.fit[p.id] !== undefined ? M.fit[p.id] : p.fit;
-    sum += p.r * (0.62 + 0.38 * f / 100);
+    // individual morale matters: a happy player plays above himself
+    sum += p.r * (0.62 + 0.38 * f / 100) * (0.93 + 0.10 * p.morale / 100);
   });
   let avg = sum / pls.length;
   const mm = { att: 1.08, def: 0.92, ctr: 0.96, pos: 1.02, bal: 1 }[G.mentality] || 1;
@@ -67,13 +68,27 @@ function calcUserDef() {
   return (sum / defs.length) * mm * (1 + (G.defLine - 5) * 0.008);
 }
 
+/* how the opponent will set up against you */
+function predictApproach(fix) {
+  const mine = clubEffStr(G.club);
+  return fix.str <= mine - 8 ? 'bus' : fix.str >= mine + 5 ? 'attack' : 'balanced';
+}
+function isDerby(fix) {
+  return fix && fix.comp === 'PL' && fix.oppKey && RIVALS[G.club] && RIVALS[G.club].indexOf(fix.oppKey) >= 0;
+}
+
 function startMatchState(fix) {
   const oppXI = buildOppXI(fix);
+  const front = oppXI.filter(p => ['ST', 'LW', 'RW', 'AM'].indexOf(p.p) >= 0);
   M = {
-    fix: fix, min: 0, score: [0, 0], scorers: [], shots: [0, 0], xg: [0, 0], poss: 50,
+    fix: fix, min: 0, endMin: 90 + rnd(1, 5), score: [0, 0], scorers: [], shots: [0, 0], xg: [0, 0], poss: 50,
     yel: [0, 0], red: [0, 0], subsUsed: 0, shoutEffect: 0,
     playing: G.xi.slice(), benchIds: G.bench.slice(), fit: {}, ratings: {},
     oppXI: oppXI, oppAtk: oppAtk(oppXI), oppDef: oppDef(oppXI),
+    oppApproach: predictApproach(fix),
+    oppPace: front.length ? front.reduce((s, p) => s + (p.pac || p.r), 0) / front.length : 75,
+    oppRed: 0, oppYelNames: {},
+    derby: isDerby(fix),
     participated: {}, injuredOff: [], finished: false, log: []
   };
   M.playing.forEach(id => {
@@ -96,56 +111,129 @@ function matchMinute() {
   const shoutMod = 1 + M.shoutEffect;
   if (M.shoutEffect > 0) M.shoutEffect = Math.max(0, M.shoutEffect - 0.001);
 
-  let gp = 0.0165 * Math.pow(atk / Math.max(50, M.oppDef), 1.65) * homeAdv * shoutMod * (1 + (train.atkBonus || 0));
-  let cp = 0.0165 * Math.pow(M.oppAtk / Math.max(50, def), 1.65) * (2 - homeAdv) * (1 - (train.defBonus || 0));
-  gp = clamp(gp, 0.004, 0.10); cp = clamp(cp, 0.004, 0.10);
+  // a man down hurts the opposition
+  const oppAtkEff = M.oppAtk * (1 - 0.10 * M.oppRed);
+  const oppDefEff = M.oppDef * (1 - 0.08 * M.oppRed);
+
+  let gp = 0.0165 * Math.pow(atk / Math.max(50, oppDefEff), 1.65) * homeAdv * shoutMod * (1 + (train.atkBonus || 0));
+  let cp = 0.0165 * Math.pow(oppAtkEff / Math.max(50, def), 1.65) * (2 - homeAdv) * (1 - (train.defBonus || 0));
+
+  // ── tactical matchups ──
+  if (M.oppApproach === 'bus') { gp *= 0.86; cp *= 0.70; }
+  else if (M.oppApproach === 'attack') { gp *= 1.08; cp *= 1.12; }
+  if (G.mentality === 'ctr' && M.oppApproach === 'attack') gp *= 1.16; // counter punishes open teams
+  if (G.mentality === 'pos' && M.oppApproach === 'bus') gp *= 1.08;    // patience unpicks a low block
+  if (G.mentality === 'att' && M.oppApproach === 'bus') { gp *= 0.96; cp *= 1.06; } // overcommitting invites counters
+  if (G.defLine >= 8) { gp *= 1.04; cp *= M.oppPace >= 82 ? 1.10 : 1.04; } // high line vs pace is risky
+  else if (G.defLine <= 3) { gp *= 0.96; cp *= 0.93; }
+  if (G.pressing >= 8) { gp *= 1.04; cp *= 1.04; }
+  if (M.min > 89) { gp *= 1.18; cp *= 1.18; } // stoppage-time chaos
+  gp = clamp(gp, 0.004, 0.11); cp = clamp(cp, 0.003, 0.11);
 
   const attackers = M.playing.map(playerById).filter(p => p && ['ST', 'LW', 'RW', 'AM', 'CM'].indexOf(p.p) >= 0);
+  const defenders = M.playing.map(playerById).filter(p => p && ['GK', 'CB', 'RB', 'LB', 'DM'].indexOf(p.p) >= 0);
   const r = Math.random();
+  let acc = 0;
+  const hit = (p) => { const lo = acc; acc += p; return r >= lo && r < acc; };
 
-  if (r < gp && attackers.length) {
-    // ── user goal
-    const weights = attackers.map(p => Math.pow(Math.max(20, p.sho), 2));
-    const total = weights.reduce((s, w) => s + w, 0);
-    let rr = Math.random() * total, scorer = attackers[0];
-    for (let i = 0; i < attackers.length; i++) { rr -= weights[i]; if (rr <= 0) { scorer = attackers[i]; break; } }
-    M.score[0]++; M.shots[0]++; M.xg[0] += rndf(0.3, 0.7);
-    scorer.g++; if (fix.comp === 'PL') scorer.plG++;
-    M.ratings[scorer.id] = Math.min(10, (M.ratings[scorer.id] || 6.5) + 1.0);
-    let assistName = '';
-    if (Math.random() < 0.72 && attackers.length > 1) {
-      const others = attackers.filter(p => p.id !== scorer.id);
-      const ast = pick(others);
-      ast.a++; assistName = ast.n;
-      M.ratings[ast.id] = Math.min(10, (M.ratings[ast.id] || 6.5) + 0.6);
+  if (hit(gp) && attackers.length) {
+    // ── user goal (subject to VAR, occasionally an own goal)
+    if (Math.random() < 0.06) {
+      M.shots[0]++; M.xg[0] += rndf(0.3, 0.6);
+      ev.push({ type: 'var', side: 0, text: '📺 VAR check... GOAL DISALLOWED! Marginal offside against ' + pick(attackers).n + '.' });
+    } else if (Math.random() < 0.04) {
+      M.score[0]++; M.shots[0]++; M.xg[0] += rndf(0.05, 0.2);
+      const ogName = pick(M.oppXI.filter(p => ['CB', 'RB', 'LB', 'GK'].indexOf(p.p) >= 0)).n;
+      M.scorers.push({ side: 0, n: ogName + ' (og)', min: M.min });
+      G.morale = clamp(G.morale + 2, 5, 100);
+      ev.push({ type: 'goal', side: 0, text: '⚽ OWN GOAL! ' + ogName + ' turns it into his own net! ' + M.score[0] + '-' + M.score[1] });
+    } else {
+      const weights = attackers.map(p => Math.pow(Math.max(20, p.sho), 2));
+      const total = weights.reduce((s, w) => s + w, 0);
+      let rr = Math.random() * total, scorer = attackers[0];
+      for (let i = 0; i < attackers.length; i++) { rr -= weights[i]; if (rr <= 0) { scorer = attackers[i]; break; } }
+      M.score[0]++; M.shots[0]++; M.xg[0] += rndf(0.3, 0.7);
+      scorer.g++; if (fix.comp === 'PL') scorer.plG++;
+      M.ratings[scorer.id] = Math.min(10, (M.ratings[scorer.id] || 6.5) + 1.0);
+      let assistName = '';
+      if (Math.random() < 0.72 && attackers.length > 1) {
+        const others = attackers.filter(p => p.id !== scorer.id);
+        const ast = pick(others);
+        ast.a++; assistName = ast.n;
+        M.ratings[ast.id] = Math.min(10, (M.ratings[ast.id] || 6.5) + 0.6);
+      }
+      M.scorers.push({ side: 0, n: scorer.n, min: M.min, assist: assistName });
+      G.morale = clamp(G.morale + 2, 5, 100);
+      ev.push({ type: 'goal', side: 0, text: '⚽ GOAL! ' + scorer.n + ' scores' + (assistName ? ' (' + assistName + ')' : '') + '! ' + M.score[0] + '-' + M.score[1] });
     }
-    M.scorers.push({ side: 0, n: scorer.n, min: M.min, assist: assistName });
-    G.morale = clamp(G.morale + 2, 5, 100);
-    ev.push({ type: 'goal', side: 0, text: '⚽ GOAL! ' + scorer.n + ' scores' + (assistName ? ' (' + assistName + ')' : '') + '! ' + M.score[0] + '-' + M.score[1] });
-  } else if (r < gp + cp) {
-    // ── opponent goal
-    const oppF = M.oppXI.filter(p => ['ST', 'LW', 'RW', 'AM'].indexOf(p.p) >= 0);
-    const sc = oppF.length ? pick(oppF) : M.oppXI[10];
-    M.score[1]++; M.shots[1]++; M.xg[1] += rndf(0.3, 0.7);
-    if (sc.pid && PLAYERS[sc.pid]) { PLAYERS[sc.pid].g++; if (fix.comp === 'PL') PLAYERS[sc.pid].plG++; }
-    M.scorers.push({ side: 1, n: sc.n, min: M.min });
-    M.playing.map(playerById).filter(p => p && ['GK', 'CB', 'RB', 'LB', 'DM'].indexOf(p.p) >= 0)
-      .forEach(p => { M.ratings[p.id] = Math.max(4, (M.ratings[p.id] || 6.5) - 0.25); });
-    G.morale = clamp(G.morale - 2, 5, 100);
-    ev.push({ type: 'oppgoal', side: 1, text: '🥅 ' + fix.opp + ' score — ' + sc.n + '. ' + M.score[0] + '-' + M.score[1] });
-  } else if (r < gp + cp + 0.035) {
+  } else if (hit(cp)) {
+    // ── opponent goal (VAR / own goal possible here too)
+    if (Math.random() < 0.06) {
+      M.shots[1]++; M.xg[1] += rndf(0.3, 0.6);
+      ev.push({ type: 'var', side: 1, text: '📺 VAR check on ' + fix.opp + ' goal... DISALLOWED! Offside. Let off!' });
+    } else if (Math.random() < 0.03 && defenders.length) {
+      M.score[1]++; M.shots[1]++; M.xg[1] += rndf(0.05, 0.2);
+      const og = pick(defenders);
+      M.scorers.push({ side: 1, n: og.n + ' (og)', min: M.min });
+      M.ratings[og.id] = Math.max(3.5, (M.ratings[og.id] || 6.5) - 1.0);
+      G.morale = clamp(G.morale - 2, 5, 100);
+      ev.push({ type: 'oppgoal', side: 1, text: '🥅 Disaster — ' + og.n + ' puts it into his own net. ' + M.score[0] + '-' + M.score[1] });
+    } else {
+      const oppF = M.oppXI.filter(p => ['ST', 'LW', 'RW', 'AM'].indexOf(p.p) >= 0);
+      const sc = oppF.length ? pick(oppF) : M.oppXI[10];
+      M.score[1]++; M.shots[1]++; M.xg[1] += rndf(0.3, 0.7);
+      if (sc.pid && PLAYERS[sc.pid]) { PLAYERS[sc.pid].g++; if (fix.comp === 'PL') PLAYERS[sc.pid].plG++; }
+      M.scorers.push({ side: 1, n: sc.n, min: M.min });
+      defenders.forEach(p => { M.ratings[p.id] = Math.max(4, (M.ratings[p.id] || 6.5) - 0.25); });
+      G.morale = clamp(G.morale - 2, 5, 100);
+      ev.push({ type: 'oppgoal', side: 1, text: '🥅 ' + fix.opp + ' score — ' + sc.n + '. ' + M.score[0] + '-' + M.score[1] });
+    }
+  } else if (hit(0.0018) && attackers.length) {
+    // ── penalty to us
+    const taker = attackers.slice().sort((a, b) => b.sho - a.sho)[0];
+    M.shots[0]++; M.xg[0] += 0.76;
+    ev.push({ type: 'chance', side: 0, text: '⚠️ PENALTY to us! ' + taker.n + ' steps up...' });
+    if (Math.random() < 0.76) {
+      M.score[0]++;
+      taker.g++; if (fix.comp === 'PL') taker.plG++;
+      M.ratings[taker.id] = Math.min(10, (M.ratings[taker.id] || 6.5) + 0.9);
+      M.scorers.push({ side: 0, n: taker.n + ' (pen)', min: M.min });
+      G.morale = clamp(G.morale + 2, 5, 100);
+      ev.push({ type: 'goal', side: 0, text: '⚽ GOAL! ' + taker.n + ' converts the penalty! ' + M.score[0] + '-' + M.score[1] });
+    } else {
+      M.ratings[taker.id] = Math.max(4, (M.ratings[taker.id] || 6.5) - 0.5);
+      ev.push({ type: 'chance', side: 0, text: '❌ ' + taker.n + pick([' blazes the penalty over!', "'s penalty is saved!", ' hits the post from the spot!']) });
+    }
+  } else if (hit(0.0015)) {
+    // ── penalty to them
+    const oppF = M.oppXI.filter(p => ['ST', 'AM'].indexOf(p.p) >= 0);
+    const taker = oppF.length ? oppF.slice().sort((a, b) => b.sho - a.sho)[0] : M.oppXI[10];
+    M.shots[1]++; M.xg[1] += 0.76;
+    const gk = M.playing.map(playerById).find(p => p && p.p === 'GK');
+    ev.push({ type: 'oppchance', side: 1, text: '⚠️ Penalty to ' + fix.opp + '! ' + taker.n + ' steps up...' });
+    if (Math.random() < 0.72) {
+      M.score[1]++;
+      if (taker.pid && PLAYERS[taker.pid]) { PLAYERS[taker.pid].g++; if (fix.comp === 'PL') PLAYERS[taker.pid].plG++; }
+      M.scorers.push({ side: 1, n: taker.n + ' (pen)', min: M.min });
+      G.morale = clamp(G.morale - 2, 5, 100);
+      ev.push({ type: 'oppgoal', side: 1, text: '🥅 ' + taker.n + ' scores from the spot. ' + M.score[0] + '-' + M.score[1] });
+    } else {
+      if (gk) M.ratings[gk.id] = Math.min(10, (M.ratings[gk.id] || 6.5) + 0.8);
+      ev.push({ type: 'chance', side: 0, text: '🧤 ' + (gk ? gk.n + ' SAVES the penalty!' : 'The penalty is missed!') });
+    }
+  } else if (hit(0.033) ) {
     // ── user chance missed
     M.shots[0]++; M.xg[0] += rndf(0.04, 0.18);
     const p = attackers.length ? pick(attackers) : null;
     ev.push({ type: 'chance', side: 0, text: '⚡ ' + (p ? p.n : 'Shot') + pick([' fires wide!', ' denied by the keeper!', ' hits the post!', ' blazes over!']) });
-  } else if (r < gp + cp + 0.06) {
+  } else if (hit(0.025)) {
     // ── opponent chance
     M.shots[1]++; M.xg[1] += rndf(0.04, 0.18);
     const gk = M.playing.map(playerById).find(p => p && p.p === 'GK');
     if (gk && Math.random() < 0.5) M.ratings[gk.id] = Math.min(10, (M.ratings[gk.id] || 6.5) + 0.15);
     ev.push({ type: 'oppchance', side: 1, text: '⚠️ ' + fix.opp + ' threaten' + (gk ? ' — great save by ' + gk.n + '!' : '!') });
-  } else if (r < gp + cp + 0.068) {
-    // ── booking
+  } else if (hit(0.008)) {
+    // ── booking for us
     const cand = M.playing.map(playerById).filter(Boolean);
     if (cand.length) {
       const yp = pick(cand);
@@ -168,7 +256,16 @@ function matchMinute() {
         }
       }
     }
-  } else if (r < gp + cp + 0.073) {
+  } else if (hit(0.007)) {
+    // ── booking for them
+    const yp = pick(M.oppXI);
+    M.yel[1]++;
+    ev.push({ type: 'yellow', text: '🟨 Yellow card for ' + fix.opp + ': ' + yp.n });
+    if (M.oppYelNames[yp.n]) {
+      M.red[1]++; M.oppRed++;
+      ev.push({ type: 'red', text: '🟥 ' + fix.opp + ' DOWN TO ' + (11 - M.oppRed) + '! Second yellow for ' + yp.n + '!' });
+    } else M.oppYelNames[yp.n] = true;
+  } else if (hit(0.005)) {
     // ── knock / possible injury
     const cand = M.playing.map(playerById).filter(Boolean);
     if (cand.length) {
@@ -177,7 +274,7 @@ function matchMinute() {
       if (Math.random() < 0.30) M.injuredOff.push(ip.id);
       ev.push({ type: 'injury', text: '🚑 ' + ip.n + ' goes down — may need to come off.' });
     }
-  } else if (r < gp + cp + 0.10) {
+  } else if (hit(0.027)) {
     const flavour = [fix.opp + ' building pressure.', 'Possession traded in midfield.', 'Corner — headed clear.', 'Free kick wasted.', 'Good pressing high up the pitch.', 'Slick passing move breaks down.'];
     ev.push({ type: 'flavour', text: pick(flavour) });
   }
@@ -193,9 +290,10 @@ function matchMinute() {
       M.fit[id] = Math.max(30, (M.fit[id] || p.fit) - 1);
     }
   });
-  // possession drifts toward strength balance
-  const target = atk / (atk + M.oppAtk) * 100;
-  M.poss = clamp(Math.round(M.poss + (target - M.poss) * 0.04), 25, 75);
+  // possession drifts toward strength balance (a low block concedes the ball)
+  let target = atk / (atk + oppAtkEff) * 100;
+  if (M.oppApproach === 'bus') target += 9; else if (M.oppApproach === 'attack') target -= 4;
+  M.poss = clamp(Math.round(M.poss + (target - M.poss) * 0.04), 22, 78);
   // ratings drift with score
   if (M.min % 10 === 0) {
     const diff = M.score[0] - M.score[1];
@@ -279,6 +377,7 @@ function finalizeMatch() {
     const rounds = fix.comp === 'FA' ? FA_ROUNDS : LC_ROUNDS;
     cup.res[fix.round] = { opp: fix.opp, sc: ug + '-' + og, out: out, note: decidedBy };
     cup.next = null;
+    shrinkCupPot(fix.comp, fix.comp === 'FA' ? 'FA Cup' : 'Carabao Cup');
     if (out === 'W') {
       const ni = rounds.indexOf(fix.round) + 1;
       if (ni < rounds.length) {
@@ -333,6 +432,13 @@ function finalizeMatch() {
     G.morale = clamp(G.morale + (out === 'W' ? 8 : out === 'D' ? 0 : -8), 5, 100);
   }
 
+  // derbies cut deeper, both ways
+  if (M.derby) {
+    G.morale = clamp(G.morale + (out === 'W' ? 4 : out === 'L' ? -4 : 0), 5, 100);
+    G.boardConf = clamp(G.boardConf + (out === 'W' ? 2 : out === 'L' ? -2 : 0), 0, 100);
+    if (out === 'W') addInbox('🔥', 'Derby bragging rights are ours! The city is buzzing after beating ' + fix.opp + '.', 'news');
+    else if (out === 'L') addInbox('🔥', 'A bitter derby defeat to ' + fix.opp + '. The fans are hurting.', 'news');
+  }
   updateBoardAfterMatch(fix.comp, out);
   G.form.push(out);
   if (G.form.length > 10) G.form.shift();
@@ -362,6 +468,7 @@ function advanceWorld() {
   if (fix) {
     const days = Math.max(2, fix.day - (G.lastDay === undefined ? 0 : G.lastDay));
     weeklyTick(Math.min(days, 14));
+    aiWeeklyTick(Math.min(days, 14));
     G.curFix = fix;
   }
   saveGame();
@@ -371,6 +478,6 @@ function advanceWorld() {
 /* Fully headless match (used for tests / instant result) */
 function simulateFullMatch(fix) {
   startMatchState(fix);
-  for (let m = 0; m < 90; m++) matchMinute();
+  while (M.min < M.endMin) matchMinute();
   return finalizeMatch();
 }

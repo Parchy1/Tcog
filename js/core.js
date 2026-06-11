@@ -57,35 +57,37 @@ function mkPlayer(name, pos, r, age, clubKey, extra) {
 
 const SQUAD_TEMPLATE = { GK: 2, RB: 2, CB: 4, LB: 2, DM: 2, CM: 4, AM: 2, RW: 2, LW: 2, ST: 3 };
 
+function genSquadFor(club, skipStars) {
+  const squad = [];
+  if (club.key === 'NEW' && !skipStars) {
+    NUFC_SQUAD.forEach(t => {
+      squad.push(mkPlayer(t.n, t.p, t.r, t.age, 'NEW', {
+        pac: t.pac, sho: t.sho, pas: t.pas, dri: t.dri, def: t.def, phy: t.phy,
+        num: t.num, val: t.val, contract: t.contract, pot: t.pot
+      }));
+    });
+  } else if (!skipStars) {
+    (STARS[club.key] || []).forEach(s => squad.push(mkPlayer(s[0], s[1], s[2], s[3], club.key, { contract: rnd(2, 4) })));
+  }
+  Object.keys(SQUAD_TEMPLATE).forEach(pos => {
+    const have = squad.filter(p => p.p === pos).length;
+    for (let i = have; i < SQUAD_TEMPLATE[pos]; i++) {
+      const young = Math.random() < 0.35;
+      const age = young ? rnd(17, 21) : rnd(22, 33);
+      const r = clamp(club.str - rnd(young ? 8 : 4, young ? 18 : 14), 52, 95);
+      squad.push(mkPlayer(pick(FIRST_NAMES) + ' ' + pick(LAST_NAMES), pos, r, age, club.key));
+    }
+  });
+  // shirt numbers for generated players
+  let num = 1;
+  const taken = {}; squad.forEach(p => { if (p.num) taken[p.num] = true; });
+  squad.forEach(p => { if (!p.num) { while (taken[num]) num++; p.num = num; taken[num] = true; } });
+  squad.forEach(p => { PLAYERS[p.id] = p; });
+}
+
 function genSquads() {
   PLAYERS = {}; NEXT_ID = 1;
-  CLUBS.forEach(club => {
-    const squad = [];
-    if (club.key === 'NEW') {
-      NUFC_SQUAD.forEach(t => {
-        squad.push(mkPlayer(t.n, t.p, t.r, t.age, 'NEW', {
-          pac: t.pac, sho: t.sho, pas: t.pas, dri: t.dri, def: t.def, phy: t.phy,
-          num: t.num, val: t.val, contract: t.contract, pot: t.pot
-        }));
-      });
-    } else {
-      (STARS[club.key] || []).forEach(s => squad.push(mkPlayer(s[0], s[1], s[2], s[3], club.key, { contract: rnd(2, 4) })));
-      Object.keys(SQUAD_TEMPLATE).forEach(pos => {
-        const have = squad.filter(p => p.p === pos).length;
-        for (let i = have; i < SQUAD_TEMPLATE[pos]; i++) {
-          const young = Math.random() < 0.35;
-          const age = young ? rnd(17, 21) : rnd(22, 33);
-          const r = clamp(club.str - rnd(young ? 8 : 4, young ? 18 : 14), 52, 95);
-          squad.push(mkPlayer(pick(FIRST_NAMES) + ' ' + pick(LAST_NAMES), pos, r, age, club.key));
-        }
-      });
-    }
-    // shirt numbers for generated players
-    let num = 1;
-    const taken = {}; squad.forEach(p => { if (p.num) taken[p.num] = true; });
-    squad.forEach(p => { if (!p.num) { while (taken[num]) num++; p.num = num; taken[num] = true; } });
-    squad.forEach(p => { PLAYERS[p.id] = p; });
-  });
+  CLUBS.forEach(club => genSquadFor(club, false));
   // star players at non-PL clubs (transfer targets)
   EURO_STARS.forEach(s => {
     const p = mkPlayer(s[0], s[1], s[2], s[3], null, { foreign: true, contract: rnd(2, 4) });
@@ -134,6 +136,7 @@ function buildCalendar(euroMds) {
     if (lcAfter[r]) cal.push({ t: 'LC', round: lcAfter[r], day: base + off++ });
     if (faAfter[r]) cal.push({ t: 'FA', round: faAfter[r], day: base + off++ });
     if (koAfter[r]) cal.push({ t: 'EUKO', phase: koAfter[r], day: base + off++ });
+    if (r === 28) cal.push({ t: 'YOUTH', day: base + off++ });
   }
   const endBase = 37 * 7;
   cal.push({ t: 'FA', round: 'F', day: endBase + 6 });
@@ -175,26 +178,67 @@ function clubEffStr(key) {
   const sq = squadOf(key).filter(p => !p.injured).sort((a, b) => b.r - a.r).slice(0, 14);
   if (!sq.length) return CLUB_BY_KEY[key].str;
   const avg = sq.reduce((s, p) => s + p.r, 0) / sq.length;
-  return Math.round(CLUB_BY_KEY[key].str * 0.45 + avg * 0.55);
+  let s = CLUB_BY_KEY[key].str * 0.45 + avg * 0.55;
+  // momentum: recent results swing effective strength by up to ~±5%
+  const f = (G && G.aiForm && G.aiForm[key]) || [];
+  if (f.length >= 3) {
+    const pts = f.reduce((x, r) => x + (r === 'W' ? 3 : r === 'D' ? 1 : 0), 0);
+    s *= 1 + (pts / (f.length * 3) - 0.45) * 0.10;
+  }
+  return Math.round(s);
+}
+function pushForm(key, out) {
+  if (!G.aiForm) G.aiForm = {};
+  const f = G.aiForm[key] = G.aiForm[key] || [];
+  f.push(out);
+  if (f.length > 5) f.shift();
 }
 
-/* ── cup draws ───────────────────────────────────────────────── */
-function drawCupOpp(cup, round) {
+/* ── cup draws: a real pot of remaining teams, halved each round ── */
+function buildCupPot() {
+  const plNames = CLUBS.map(c => c.name);
+  const others = CLUBS.filter(c => c.key !== G.club).map(c => ({ n: c.name, s: clubEffStr(c.key) }));
+  const lower = Object.keys(LOWER_LEAGUE).filter(n => plNames.indexOf(n) < 0).map(n => ({ n: n, s: LOWER_LEAGUE[n] }));
+  return shuffle(others.concat(lower));
+}
+function drawCupOpp(cupT, round) {
+  const cup = cupT === 'FA' ? G.fa : G.lc;
+  if (!cup.pot || !cup.pot.length) cup.pot = buildCupPot();
   const late = round === 'SF' || round === 'F';
   const early = round === 'R2' || round === 'R3';
-  let opp, str;
-  const lowerChance = cup === 'LC' ? (early ? 0.75 : 0.3) : (early ? 0.3 : 0.15);
-  if (Math.random() < lowerChance) {
-    opp = pick(Object.keys(LOWER_LEAGUE)); str = LOWER_LEAGUE[opp];
-  } else {
-    const c = pick(CLUBS.filter(cl => cl.key !== G.club));
-    opp = c.name; str = clubEffStr(c.key);
+  let pool = cup.pot;
+  if (early) {
+    // early rounds usually pair you with the weaker half of the field
+    const sorted = cup.pot.slice().sort((a, b) => a.s - b.s);
+    pool = sorted.slice(0, Math.max(3, Math.ceil(sorted.length * (cupT === 'LC' ? 0.45 : 0.6))));
   }
-  return { opp: opp, str: str, home: late ? false : Math.random() < 0.5, neutral: late };
+  const t = pick(pool);
+  cup.pot = cup.pot.filter(x => x.n !== t.n);
+  return { opp: t.n, str: t.s, home: late ? false : Math.random() < 0.5, neutral: late };
+}
+/* the rest of the field plays its ties too — survivors advance, upsets happen */
+function shrinkCupPot(cupT, label) {
+  const cup = cupT === 'FA' ? G.fa : G.lc;
+  if (!cup.pot || cup.pot.length <= 1) return;
+  const keep = Math.ceil(cup.pot.length * 0.55);
+  const ranked = cup.pot.slice().sort((a, b) => (b.s + rnd(-12, 12)) - (a.s + rnd(-12, 12)));
+  const survivors = ranked.slice(0, keep);
+  const out = ranked.slice(keep);
+  cup.pot = shuffle(survivors);
+  const big = out.filter(x => x.s >= 84);
+  if (big.length && Math.random() < 0.7) addInbox('📰', big[0].n + ' have been dumped out of the ' + label + '!', 'news');
 }
 
 /* ── new game ────────────────────────────────────────────────── */
+function applyClubOverrides() {
+  if (!G || !G.clubOverrides) return;
+  Object.keys(G.clubOverrides).forEach(k => Object.assign(CLUB_BY_KEY[k], G.clubOverrides[k]));
+}
+function resetClubsToBase() {
+  CLUBS.forEach((c, i) => Object.assign(c, CLUBS_BASE[i]));
+}
 function newGame(clubKey, managerName) {
+  resetClubsToBase();
   genSquads();
   const club = CLUB_BY_KEY[clubKey];
   G = {
@@ -204,12 +248,14 @@ function newGame(clubKey, managerName) {
     budget: club.bud, morale: 70, boardConf: 65,
     tactic: '433', mentality: 'bal', style: 'direct', pressing: 7, defLine: 6, width: 6,
     instrs: [], training: 'balanced', trainFocus: [],
-    euro: null, fa: { round: 'R3', elim: false, won: false, res: {}, next: null },
-    lc: { round: 'R2', elim: false, won: false, res: {}, next: null },
+    euro: null, fa: { round: 'R3', elim: false, won: false, res: {}, next: null, pot: null },
+    lc: { round: 'R2', elim: false, won: false, res: {}, next: null, pot: null },
     inbox: [], unread: 0, pendingOffer: null, aiWindowDone: false,
     xi: new Array(11).fill(null), bench: [],
     plW: 0, plD: 0, plL: 0, plGF: 0, plGA: 0, pts: 0, form: [],
-    curFix: null, hist: [], sacked: false, trophies: []
+    curFix: null, hist: [], sacked: false, trophies: [],
+    aiForm: {}, clubOverrides: {}, sackedMgrs: {}, wageCap: 0,
+    pendingJob: null, lastRelegated: null
   };
   CLUBS.forEach(c => { G.table[c.key] = { p: 0, w: 0, d: 0, l: 0, gf: 0, ga: 0, pts: 0 }; });
   G.euro = buildEuro(club.euro);
@@ -218,6 +264,8 @@ function newGame(clubKey, managerName) {
   addInbox('💰', 'Transfer budget set at ' + money(G.budget) + '. The ' + (winName() || 'transfer window') + ' is open.', 'board');
   if (G.euro) addInbox(EURO_CFG[G.euro.comp].icon, 'We have qualified for the ' + EURO_CFG[G.euro.comp].label + ' league phase.', 'comp');
   autoPickXI();
+  G.wageCap = Math.max(Math.round(wageBill() * 1.25), wageBill() + 150);
+  addInbox('🏦', 'The board set the wage budget at £' + G.wageCap + 'k/week (current bill £' + wageBill() + 'k).', 'board');
 }
 
 function addInbox(icon, msg, type) {
@@ -313,6 +361,7 @@ function nextUserFixture() {
       if (!G.lc.elim && !G.lc.won && G.lc.round === e.round) return withIdx(fixtureForEntry(e));
       G.ci++; continue;
     }
+    if (e.t === 'YOUTH') { youthIntake(); G.ci++; continue; }
     G.ci++;
   }
   return null;
@@ -349,6 +398,13 @@ function loadGame() {
     const s = JSON.parse(raw);
     if (!s || !s.G || !s.PLAYERS) return false;
     G = s.G; PLAYERS = s.PLAYERS; NEXT_ID = s.NEXT_ID;
+    // migrate older saves
+    G.aiForm = G.aiForm || {};
+    G.clubOverrides = G.clubOverrides || {};
+    G.sackedMgrs = G.sackedMgrs || {};
+    if (!G.wageCap) G.wageCap = Math.max(Math.round(wageBill() * 1.25), wageBill() + 150);
+    resetClubsToBase();
+    applyClubOverrides();
     return true;
   } catch (e) { return false; }
 }

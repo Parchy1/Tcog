@@ -47,15 +47,18 @@ var UI = {
     if (!loadGame()) { toast('Could not load save.'); return; }
     this.enterGame();
   },
-  enterGame() {
-    gid('pg-setup').style.display = 'none';
-    gid('app').style.display = 'grid';
+  applyClubTheme() {
     const c = userClub();
     document.documentElement.style.setProperty('--club', c.col1);
     document.documentElement.style.setProperty('--club2', this.darken(c.col1));
     gid('tb-logo').textContent = c.name.split(/[\s']/).map(w => w[0]).join('').substring(0, 3).toUpperCase();
     gid('tb-logo').style.background = 'linear-gradient(135deg,' + c.col1 + ',' + c.col2 + ')';
     gid('tb-club-name').textContent = c.full;
+  },
+  enterGame() {
+    gid('pg-setup').style.display = 'none';
+    gid('app').style.display = 'grid';
+    this.applyClubTheme();
     if (G.sacked) { this.nav('sacked'); return; }
     if (!G.curFix && !G.endProcessed) { if (advanceWorld()) autoPickXI(); }
     this.nav(G.curFix ? 'hub' : 'end');
@@ -143,12 +146,14 @@ var UI = {
     // next fixture
     const fix = G.curFix;
     if (fix) {
-      gid('h-comp').textContent = this.compLabel(fix);
+      gid('h-comp').textContent = this.compLabel(fix) + (isDerby(fix) ? ' · 🔥 DERBY' : '');
       gid('h-matchline').innerHTML = fix.home ? userClub().name + ' <span style="color:var(--text2)">vs</span> ' + esc(fix.opp)
         : esc(fix.opp) + ' <span style="color:var(--text2)">vs</span> ' + userClub().name;
       gid('h-venue').textContent = fix.neutral ? 'Wembley Stadium (neutral)' : fix.home ? userClub().stadium : 'Away';
       gid('h-matchdate').textContent = fmtDate(dateOf(fix.day));
-      gid('h-oppform').textContent = 'Opponent strength: ' + fix.str;
+      const appr = predictApproach(fix);
+      gid('h-oppform').textContent = 'Strength ' + fix.str + ' · Scouts: ' +
+        (appr === 'bus' ? 'they will sit deep and defend in numbers.' : appr === 'attack' ? 'they will come at us — expect an open game.' : 'an even contest, fine margins.');
       gid('hub-play-btn').disabled = false;
       gid('hub-continue').textContent = 'Continue ▶';
     } else {
@@ -395,10 +400,10 @@ var UI = {
         this.minTimer++;
         if (this.minTimer >= this.TPM) {
           this.minTimer = 0;
-          if (M.min < 90) {
+          if (M.min < M.endMin) {
             const evs = matchMinute();
             this.processEvents(evs);
-            gid('m-min').textContent = M.min + "'";
+            gid('m-min').textContent = fmtMin(M.min);
             this.updateMatchStats();
             if (M.min === 45 && !this.htShown) {
               this.htShown = true;
@@ -406,7 +411,11 @@ var UI = {
               this.showHalfTime();
               return;
             }
-            if (M.min >= 90) {
+            if (M.min === 90 && M.endMin > 90) {
+              this.banner('', '⏱ ' + (M.endMin - 90) + ' minutes of added time.');
+              this.logMatch('ml-ev', "90' Fourth official signals " + (M.endMin - 90) + ' added minutes.');
+            }
+            if (M.min >= M.endMin) {
               cancelAnimationFrame(this.raf); this.raf = null;
               gid('btn-ft').disabled = false;
               gid('btn-pause').disabled = true;
@@ -423,7 +432,8 @@ var UI = {
   },
   processEvents(evs) {
     evs.forEach(e => {
-      const minPrefix = M.min + "' ";
+      const minPrefix = fmtMin(M.min) + ' ';
+      if (e.type === 'var') { this.banner('yellow', e.text); this.logMatch('ml-yel', minPrefix + e.text); return; }
       if (e.type === 'goal') {
         PITCH.goalFlash();
         this.banner('goal', e.text);
@@ -782,7 +792,8 @@ var UI = {
     ['buy', 'free', 'sell'].forEach(k => { gid('tr-t-' + k).className = 'tab' + (k === this.trTabSel ? ' on' : ''); });
     const wn = winName();
     gid('tr-status').innerHTML = (wn ? '<span style="color:var(--green);font-weight:700">' + wn + ' is OPEN</span>' : '<span style="color:var(--red)">Transfer window closed — you can scout and plan, free agents can still be signed</span>') +
-      ' · Budget: <strong style="color:#5aabdd">' + money(G.budget) + '</strong>';
+      ' · Budget: <strong style="color:#5aabdd">' + money(G.budget) + '</strong>' +
+      ' · Wages: <strong style="color:' + (wageBill() > G.wageCap * 0.92 ? 'var(--amber)' : 'var(--text)') + '">£' + wageBill() + 'k</strong>/£' + G.wageCap + 'k per week';
     const el = gid('tr-content');
     if (this.trTabSel === 'buy') {
       const posOpts = ['ALL', 'GK', 'RB', 'CB', 'LB', 'DM', 'CM', 'AM', 'RW', 'LW', 'ST'];
@@ -820,7 +831,7 @@ var UI = {
       const mine = Object.values(PLAYERS).filter(p => p.club === G.club).sort((a, b) => b.val - a.val);
       el.innerHTML = '<div class="card" style="padding:8px 12px">' + mine.map(p =>
         '<div class="list-row"><span class="tag tag-' + p.p + '">' + p.p + '</span>' +
-        '<span style="flex:1;font-weight:500;cursor:pointer;color:#5aabdd" onclick="UI.playerModal(' + p.id + ')">' + esc(p.n) + (p.loan ? ' <span class="susp-badge">ON LOAN</span>' : '') + (p.listed ? ' <span class="susp-badge">LISTED</span>' : '') + '</span>' +
+        '<span style="flex:1;font-weight:500;cursor:pointer;color:#5aabdd" onclick="UI.playerModal(' + p.id + ')">' + esc(p.n) + (p.loan ? ' <span class="susp-badge">ON LOAN</span>' : '') + (p.listed ? ' <span class="susp-badge">LISTED</span>' : '') + (p.wantsOut ? ' <span class="inj-badge">WANTS OUT</span>' : '') + '</span>' +
         '<span class="rat" style="margin:0 8px">' + p.r + '</span>' +
         '<span style="font-size:11px;width:56px;text-align:right">' + money(p.val) + '</span>' +
         '<button class="btn sm" style="margin-left:8px" onclick="UI.toggleListRow(' + p.id + ')">' + (p.listed ? 'Unlist' : 'List') + '</button></div>').join('') + '</div>' +
@@ -834,6 +845,7 @@ var UI = {
   signFree(pid) {
     const p = playerById(pid);
     if (!p || !p.free) return;
+    if (wageBill() + p.wage > G.wageCap) { toast('His £' + p.wage + 'k/wk wages break the cap (£' + wageBill() + 'k/£' + G.wageCap + 'k).'); return; }
     p.club = G.club; p.free = false; p.foreign = false; p.clubName = null;
     p.contract = p.age >= 31 ? 1 : 2;
     p.val = valueOf(p.r, p.age, p.pot);
@@ -851,11 +863,27 @@ var UI = {
     if (!p) return;
     if (!inWindow()) { toast('The transfer window is closed.'); return; }
     this.closeModal('mod-player');
-    const ask = Math.max(1, Math.round(p.val * (1.15 + (p.id % 30) / 100)));
-    this.neg = { pid: pid, ask: ask, attempts: 0, agreed: false };
     gid('neg-name').textContent = 'Negotiate: ' + p.n + ' (' + p.p + ', ' + p.age + ')';
     gid('neg-info').textContent = (p.club ? CLUB_BY_KEY[p.club].name : p.clubName) + ' · Rating ' + p.r + ' · Value ' + money(p.val);
-    this.renderNegBody('The club wants around ' + money(ask) + '. Your budget: ' + money(G.budget) + '.');
+    // key players are protected — and sometimes simply not for sale
+    const sellerSq = p.club ? squadOf(p.club) : null;
+    const isKey = !p.listed && !p.wantsOut && (p.r >= 89 ||
+      (sellerSq && sellerSq.length > 5 && sellerSq.slice().sort((a, b) => b.r - a.r).slice(0, 2).some(x => x.id === p.id)));
+    const stamp = G.season + '-' + (winName() || '');
+    if (!p._nfs || p._nfs.w !== stamp) p._nfs = { w: stamp, refuse: isKey && p.r >= 88 && Math.random() < 0.4 };
+    if (p._nfs.refuse) {
+      this.neg = null;
+      p._hot = true;
+      gid('neg-body').innerHTML = '<p style="font-size:12px;margin-bottom:6px">"' + esc(p.n) + ' is not for sale at any price this window." The club refuse to even open talks.</p>';
+      gid('neg-footer').innerHTML = '<button class="btn" onclick="UI.closeModal(\'mod-neg\')">Walk Away</button>';
+      gid('mod-neg').classList.add('on');
+      return;
+    }
+    const mult = (p.listed || p.wantsOut) ? 0.95 : isKey ? 1.55 + (p.id % 20) / 100 : 1.15 + (p.id % 30) / 100;
+    const ask = Math.max(1, Math.round(p.val * mult));
+    this.neg = { pid: pid, ask: ask, attempts: 0, stage: 'fee', isKey: isKey };
+    this.renderNegBody((isKey ? p.n + ' is one of their key players — it will take a premium. ' : '') +
+      'The club wants around ' + money(ask) + '. Your budget: ' + money(G.budget) + '.');
     gid('mod-neg').classList.add('on');
   },
   renderNegBody(msg) {
@@ -873,25 +901,80 @@ var UI = {
     const offer = Math.round(Number(gid('neg-offer').value) || 0);
     if (offer > G.budget) { toast('You only have ' + money(G.budget) + '!'); return; }
     n.attempts++;
-    if (offer >= n.ask * 0.97) this.completeSigning(p, offer);
+    if (offer >= n.ask * 0.97) { n.fee = offer; this.personalTerms(p); }
     else if (offer >= n.ask * 0.82 && n.attempts <= 3) {
       n.ask = Math.round((n.ask + Math.max(offer, n.ask * 0.9)) / 2);
       this.renderNegBody('"Not quite enough." They counter at ' + money(n.ask) + '.');
     } else if (n.attempts >= 3) {
+      p._hot = true;
       toast('Negotiations have broken down.');
       this.closeModal('mod-neg');
     } else {
       this.renderNegBody('"That is well below our valuation." They remain firm at ' + money(n.ask) + '.');
     }
   },
-  completeSigning(p, fee) {
+  /* fee agreed — now the player decides if he fancies the move */
+  personalTerms(p) {
+    const n = this.neg;
+    const interest = moveInterest(p);
+    if (interest < -12) {
+      p._hot = true;
+      this.neg = null;
+      gid('neg-body').innerHTML = '<p style="font-size:12px;margin-bottom:6px">Fee agreed with the club — but ' + esc(p.n) + ' has no interest in joining us. "It\'s not the right move for my career." His agent ends the call.</p>';
+      gid('neg-footer').innerHTML = '<button class="btn" onclick="UI.closeModal(\'mod-neg\')">Walk Away</button>';
+      return;
+    }
+    n.stage = 'terms';
+    n.wage = Math.max(p.wage + 5, Math.round(p.wage * (1.15 + Math.max(0, -interest) * 0.05)));
+    const reluctant = interest < -4;
+    const bill = wageBill();
+    gid('neg-body').innerHTML = '<p style="font-size:12px;margin-bottom:8px">Fee of <strong>' + money(n.fee) + '</strong> agreed. ' +
+      (reluctant ? esc(p.n) + ' has doubts about the move and wants convincing wages. ' : esc(p.n) + ' is keen on the move. ') +
+      'He demands <strong>£' + n.wage + 'k/wk</strong> (currently £' + p.wage + 'k).</p>' +
+      '<p style="font-size:11px;color:var(--text2)">Wage bill: £' + bill + 'k of £' + G.wageCap + 'k/wk cap' +
+      (bill + n.wage > G.wageCap ? ' — <span style="color:var(--red)">this deal breaks the cap!</span>' : '') + '</p>';
+    gid('neg-footer').innerHTML = '<button class="btn" onclick="UI.closeModal(\'mod-neg\')">Walk Away</button>' +
+      '<button class="btn warn" onclick="UI.haggleWage()">Offer 10% less</button>' +
+      '<button class="btn suc" onclick="UI.agreeTerms()">Agree Terms ✓</button>';
+  },
+  haggleWage() {
+    const n = this.neg;
+    if (!n) return;
+    const p = playerById(n.pid);
+    if (Math.random() < 0.5) {
+      n.wage = Math.max(p.wage, Math.round(n.wage * 0.9));
+      gid('neg-body').innerHTML = '<p style="font-size:12px">His agent grumbles but accepts <strong>£' + n.wage + 'k/wk</strong>. Wage bill: £' + wageBill() + 'k of £' + G.wageCap + 'k cap.</p>';
+      gid('neg-footer').innerHTML = '<button class="btn" onclick="UI.closeModal(\'mod-neg\')">Walk Away</button>' +
+        '<button class="btn suc" onclick="UI.agreeTerms()">Agree Terms ✓</button>';
+    } else {
+      p._hot = true;
+      this.neg = null;
+      gid('neg-body').innerHTML = '<p style="font-size:12px">The agent takes the lowball personally. "We\'re done here." Talks collapse.</p>';
+      gid('neg-footer').innerHTML = '<button class="btn" onclick="UI.closeModal(\'mod-neg\')">Walk Away</button>';
+    }
+  },
+  agreeTerms() {
+    const n = this.neg;
+    if (!n) return;
+    const p = playerById(n.pid);
+    if (n.fee > G.budget) { toast('You only have ' + money(G.budget) + '!'); return; }
+    if (wageBill() + n.wage > G.wageCap) { toast('Breaks the £' + G.wageCap + 'k/wk wage cap — sell or offload first.'); return; }
+    this.completeSigning(p, n.fee, n.wage);
+  },
+  completeSigning(p, fee, wage) {
     G.budget -= fee;
     p.club = G.club; p.foreign = false; p.free = false; p.clubName = null; p.listed = false;
+    p.wantsOut = false; p._hot = false;
+    if (wage) p.wage = wage;
     p.contract = p.age <= 27 ? 4 : p.age <= 31 ? 3 : 2;
     p.scouted = true; p.fit = rnd(75, 90); p.morale = rnd(75, 90);
     const nums = {}; userSquad().forEach(x => { nums[x.num] = true; });
     let num = 1; while (nums[num]) num++; p.num = num;
     addInbox('✍️', p.n + ' signs for ' + money(fee) + '! The fans are excited.', 'transfer');
+    // squad reaction: direct rivals for the shirt aren't thrilled
+    userSquad().forEach(x => {
+      if (x.id !== p.id && x.p === p.p && x.r <= p.r + 2) x.morale = clamp(x.morale - 5, 5, 99);
+    });
     toast('⚽ ' + p.n + ' SIGNS for ' + money(fee) + '!');
     this.closeModal('mod-neg');
     saveGame();
@@ -1139,22 +1222,85 @@ var UI = {
     if (s.awards.clubPOTY) html += '<div class="card"><div class="card-title">⭐ Our Player of the Season</div><div style="font-size:13px;font-weight:700">' + esc(s.awards.clubPOTY.n) + '</div><div style="font-size:11px;color:var(--text2)">avg rating ' + (s.awards.clubPOTY.rsum / Math.max(1, s.awards.clubPOTY.apps)).toFixed(2) + '</div></div>';
     if (s.awards.clubTopScorer) html += '<div class="card"><div class="card-title">⚽ Our Top Scorer</div><div style="font-size:13px;font-weight:700">' + esc(s.awards.clubTopScorer.n) + '</div><div style="font-size:11px;color:var(--text2)">' + s.awards.clubTopScorer.g + ' goals all comps</div></div>';
     html += '</div>';
+    if (s.relegated && s.relegated.length) {
+      html += '<div class="card red"><div class="card-title">⬇️ Relegated</div><div style="font-size:12px">' +
+        s.relegated.map(k => esc(CLUB_BY_KEY[k].name)).join(' · ') + ' go down. Three Championship sides come up.</div></div>';
+    }
+    if (s.jobOffer && !G.pendingJob) {
+      const jc = CLUB_BY_KEY[s.jobOffer];
+      html += '<div class="card gold"><div class="card-title">📞 Job Offer</div>' +
+        '<div style="font-size:13px;margin-bottom:10px"><strong>' + esc(jc.full) + '</strong> want you as their new manager.<br>' +
+        '<span style="font-size:11px;color:var(--text2)">Board expectation: ' + jc.exp + ' · Transfer budget: ' + money(jc.bud) + '</span></div>' +
+        '<div class="g2"><button class="btn" onclick="UI.declineJob()">Stay Loyal</button>' +
+        '<button class="btn pri" onclick="UI.acceptJob(\'' + s.jobOffer + '\')">Accept the Job ▶</button></div></div>';
+    }
+    if (G.pendingJob) {
+      html += '<div class="card green"><div class="card-title">📞 New Job Agreed</div><div style="font-size:12px">You will take charge of <strong>' + esc(CLUB_BY_KEY[G.pendingJob].full) + '</strong> when the new season starts.</div></div>';
+    }
     html += '<div class="card"><div class="card-title">The Board</div><div style="font-size:12px;line-height:1.9">' +
       'Prize money &amp; new investment: budget now <strong style="color:#5aabdd">' + money(s.newBudget) + '</strong><br>' +
       (s.newEuro ? 'Qualified for the <strong style="color:var(--gold)">' + EURO_CFG[s.newEuro].label + '</strong> next season!' : 'No European qualification next season.') +
       '<br>Squad will age and develop over the summer. Expiring contracts will leave.</div></div>';
     gid('end-content').innerHTML = html;
   },
+  acceptJob(key) {
+    G.pendingJob = key;
+    saveGame();
+    toast('Agreed — you join ' + CLUB_BY_KEY[key].name + ' in the summer.');
+    this.renderSeasonEnd();
+  },
+  declineJob() {
+    if (G.endSummary) G.endSummary.jobOffer = null;
+    G.boardConf = clamp(G.boardConf + 5, 0, 100);
+    saveGame();
+    toast('The board appreciates your loyalty.');
+    this.renderSeasonEnd();
+  },
   newSeason() {
-    startNewSeason(G.endEuro || null);
+    let newEuro = G.endEuro || null;
+    // switching clubs: you inherit the NEW club's European qualification
+    if (G.pendingJob && G.endSummary && G.endSummary.table) {
+      const idx = G.endSummary.table.findIndex(r => r.key === G.pendingJob);
+      const pos = idx + 1;
+      newEuro = idx < 0 ? null : pos <= 5 ? 'UCL' : pos <= 7 ? 'UEL' : pos === 8 ? 'UECL' : null;
+    }
+    startNewSeason(newEuro);
     G.endProcessed = false; G.endSummary = null;
     advanceWorld();
+    this.applyClubTheme();
     this.nav('hub');
   },
   renderSacked() {
     const tr = G.trophies.length ? 'Trophies: ' + G.trophies.join(', ') : 'No trophies won.';
-    gid('sacked-content').innerHTML = esc(userClub().full) + ' have relieved ' + esc(G.manager) + ' of managerial duties.<br>' +
-      'Seasons in charge: ' + G.season + '<br>' + esc(tr) + '<br><br>Board confidence hit zero. Football is a results business.';
+    let html = esc(userClub().full) + ' have relieved ' + esc(G.manager) + ' of managerial duties.<br>' +
+      'Seasons in charge: ' + G.season + '<br>' + esc(tr) + '<br><br>Football is a results business.';
+    // your reputation earns you another chance lower down the ladder
+    const myStr = userClub().str;
+    const suitors = shuffle(CLUBS.filter(c => c.key !== G.club && c.str <= myStr + 2 &&
+      (!G.lastRelegated || G.lastRelegated.indexOf(c.key) < 0))).slice(0, 2);
+    if (suitors.length) {
+      html += '<br><br><strong style="color:var(--gold)">Your phone rings — clubs are interested:</strong><br>';
+      html += suitors.map(c =>
+        '<button class="btn gold-b" style="margin:8px 4px 0" onclick="UI.takeJob(\'' + c.key + '\')">Take over at ' + esc(c.name) + ' (' + c.exp + ')</button>'
+      ).join('');
+    }
+    gid('sacked-content').innerHTML = html;
+  },
+  takeJob(key) {
+    takeJobMidSeason(key);
+    this.applyClubTheme();
+    if (G.endProcessed) {
+      // season already over — inherit the new club's European qualification
+      if (G.endSummary && G.endSummary.table) {
+        const idx = G.endSummary.table.findIndex(r => r.key === key);
+        const pos = idx + 1;
+        G.endEuro = idx < 0 ? null : pos <= 5 ? 'UCL' : pos <= 7 ? 'UEL' : pos === 8 ? 'UECL' : null;
+      }
+      this.nav('end'); return;
+    }
+    if (!advanceWorld()) { this.nav('end'); return; }
+    this.nav('hub');
+    toast('Welcome to ' + userClub().name + ', ' + G.manager + '.');
   },
 
   closeModal(id) { gid(id).classList.remove('on'); }

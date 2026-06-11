@@ -54,17 +54,25 @@ function assert(cond, msg) { if (!cond) { failures++; console.error('  ✗ FAIL:
     try { w.UI.nav('squad'); w.UI.sqTab(t); assert(true, 'squad tab: ' + t); }
     catch (e) { assert(false, 'squad tab ' + t + ' threw: ' + e.message); }
   });
-  // transfer tabs + a negotiation
+  // transfer tabs + a negotiation (fee, then personal terms)
   try {
     w.UI.nav('transfers');
     w.UI.trTab('free'); w.UI.trTab('sell'); w.UI.trTab('buy');
-    const target = Object.values(w.PLAYERS).find(p => p.club && p.club !== 'NEW' && p.val <= 20);
+    // pick a non-key squad player from a weaker club so the deal is realistic
+    const CLUB_BY_KEY = w.eval('CLUB_BY_KEY');
+    const target = Object.values(w.PLAYERS).find(p => {
+      if (!p.club || p.club === 'NEW' || p.val > 20 || p.val < 4 || p.age > 24) return false;
+      const sq = w.squadOf(p.club).slice().sort((a, b) => b.r - a.r);
+      return p.r < 88 && sq.indexOf(p) > 2 && CLUB_BY_KEY[p.club].str < 84;
+    });
     w.UI.playerModal(target.id);
     w.UI.openNegotiation(target.id);
     assert(w.document.getElementById('mod-neg').classList.contains('on'), 'negotiation modal opens (window open)');
     w.document.getElementById('neg-offer').value = String(Math.ceil(target.val * 1.6));
     const budgetBefore = w.G.budget;
     w.UI.submitOffer();
+    assert(w.UI.neg && w.UI.neg.stage === 'terms', 'fee agreed, personal terms stage reached');
+    w.UI.agreeTerms();
     assert(w.G.budget < budgetBefore && target.club === 'NEW', 'signing completes, budget spent');
   } catch (e) { assert(false, 'transfer flow threw: ' + e.message); }
 

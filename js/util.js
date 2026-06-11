@@ -32,4 +32,5 @@ function fitCol(f) { return f >= 80 ? '#27ae60' : f >= 60 ? '#d35400' : '#c0392b
 function fitLbl(f) { return f >= 85 ? 'Fresh' : f >= 70 ? 'Good' : f >= 55 ? 'Tired' : 'Exhausted'; }
 function moraleEmoji(m) { return m >= 80 ? '😄' : m >= 60 ? '😐' : m >= 40 ? '😟' : '😤'; }
 function ratCol(r) { return r >= 8 ? '#27ae60' : r >= 7 ? '#5aabdd' : r >= 6.4 ? '#d35400' : '#c0392b'; }
+function fmtMin(m) { return (m <= 90 ? m : '90+' + (m - 90)) + "'"; }
 function esc(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }

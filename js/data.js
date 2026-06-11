@@ -27,7 +27,30 @@ const CLUBS = [
   { key: 'SOU', name: 'Southampton',    full: 'Southampton',         stadium: "St. Mary's",        col1: '#d71920', col2: '#ffffff', str: 65, bud: 30,  exp: 'Avoid relegation', euro: null }
 ];
 const CLUB_BY_KEY = {}; CLUBS.forEach(c => { CLUB_BY_KEY[c.key] = c; });
+/* pristine snapshot so a new career resets any promotion/relegation rebranding */
+const CLUBS_BASE = JSON.parse(JSON.stringify(CLUBS));
 const EXP_POS = { 'Win the league': 1, 'Top 4': 4, 'Top 6': 6, 'Top half': 10, 'Mid-table': 14, 'Avoid relegation': 17 };
+
+/* Championship clubs that can be promoted to replace relegated sides */
+const CHAMPIONSHIP = [
+  { name: 'Wolves',        full: 'Wolverhampton Wanderers', stadium: 'Molineux',           col1: '#fdb913', col2: '#231f20', str: 70, bud: 45, exp: 'Mid-table' },
+  { name: 'Burnley',       full: 'Burnley',                 stadium: 'Turf Moor',          col1: '#6c1d45', col2: '#99d6ea', str: 67, bud: 40, exp: 'Avoid relegation' },
+  { name: 'Birmingham',    full: 'Birmingham City',         stadium: "St Andrew's",        col1: '#0000fe', col2: '#ffffff', str: 67, bud: 50, exp: 'Avoid relegation' },
+  { name: 'Wrexham',       full: 'Wrexham AFC',             stadium: 'Racecourse Ground',  col1: '#d2010d', col2: '#ffffff', str: 66, bud: 45, exp: 'Avoid relegation' },
+  { name: 'Sheffield Utd', full: 'Sheffield United',        stadium: 'Bramall Lane',       col1: '#ee2737', col2: '#ffffff', str: 66, bud: 38, exp: 'Avoid relegation' },
+  { name: 'Middlesbrough', full: 'Middlesbrough',           stadium: 'Riverside Stadium',  col1: '#e21c38', col2: '#ffffff', str: 66, bud: 38, exp: 'Avoid relegation' },
+  { name: 'Coventry',      full: 'Coventry City',           stadium: 'CBS Arena',          col1: '#37b7e4', col2: '#ffffff', str: 66, bud: 35, exp: 'Avoid relegation' },
+  { name: 'West Brom',     full: 'West Bromwich Albion',    stadium: 'The Hawthorns',      col1: '#122f67', col2: '#ffffff', str: 66, bud: 35, exp: 'Avoid relegation' },
+  { name: 'Norwich',       full: 'Norwich City',            stadium: 'Carrow Road',        col1: '#00a650', col2: '#fff200', str: 65, bud: 35, exp: 'Avoid relegation' },
+  { name: 'Hull',          full: 'Hull City',               stadium: 'MKM Stadium',        col1: '#f5971d', col2: '#000000', str: 64, bud: 30, exp: 'Avoid relegation' }
+];
+
+/* Local rivalries — derbies carry extra emotional weight */
+const RIVALS = {
+  NEW: ['SUN'], SUN: ['NEW'], ARS: ['TOT', 'CHE'], TOT: ['ARS', 'CHE', 'WHU'],
+  CHE: ['ARS', 'TOT', 'FUL'], LIV: ['EVE', 'MUN'], EVE: ['LIV'], MUN: ['LIV', 'MCI', 'LEE'],
+  MCI: ['MUN'], WHU: ['TOT'], CRY: ['BHA'], BHA: ['CRY'], FUL: ['CHE'], LEE: ['MUN']
+};
 
 /* Hand-written key players per club: [name, pos, rating, age].
    Sub-attributes and value are derived from position archetypes. */

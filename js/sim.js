@@ -20,32 +20,75 @@ function applyTable(tbl, h, a, hg, ag) {
   else { ht.d++; at.d++; ht.pts++; at.pts++; }
 }
 
-/* credit goals to plausible scorers in an AI club's squad (for Golden Boot) */
+/* credit goals to plausible scorers in an AI club's squad (for Golden Boot).
+   Returns a hat-trick scorer's name if one happened. */
 function creditAIScorers(key, goals) {
-  if (!goals) return;
+  if (!goals) return null;
   const atk = squadOf(key).filter(p => ['ST', 'LW', 'RW', 'AM', 'CM'].indexOf(p.p) >= 0 && !p.injured);
-  if (!atk.length) return;
+  if (!atk.length) return null;
   const weights = atk.map(p => Math.pow(Math.max(20, p.sho), 2.4));
   const total = weights.reduce((s, w) => s + w, 0);
+  const counts = {};
   for (let g = 0; g < goals; g++) {
     let r = Math.random() * total;
-    for (let i = 0; i < atk.length; i++) { r -= weights[i]; if (r <= 0) { atk[i].g++; atk[i].plG++; break; } }
+    for (let i = 0; i < atk.length; i++) {
+      r -= weights[i];
+      if (r <= 0) { atk[i].g++; atk[i].plG++; counts[atk[i].n] = (counts[atk[i].n] || 0) + 1; break; }
+    }
   }
+  for (const n in counts) if (counts[n] >= 3) return n;
+  return null;
 }
 
 /* simulate every match of a PL round except the user's */
 function simPLRound(round, userResult) {
   const matches = G.rounds[round - 1];
+  let newsBudget = 2;
   matches.forEach(m => {
     if (m.h === G.club || m.a === G.club) {
-      if (userResult) applyTable(G.table, m.h, m.a, m.h === G.club ? userResult[0] : userResult[1], m.h === G.club ? userResult[1] : userResult[0]);
+      if (userResult) {
+        const ug = m.h === G.club ? userResult[0] : userResult[1];
+        const og = m.h === G.club ? userResult[1] : userResult[0];
+        applyTable(G.table, m.h, m.a, m.h === G.club ? ug : og, m.h === G.club ? og : ug);
+        const oppKey = m.h === G.club ? m.a : m.h;
+        pushForm(G.club, ug > og ? 'W' : ug === og ? 'D' : 'L');
+        pushForm(oppKey, og > ug ? 'W' : og === ug ? 'D' : 'L');
+      }
       return;
     }
-    const sc = simScore(clubEffStr(m.h), clubEffStr(m.a));
+    const hs = clubEffStr(m.h), as = clubEffStr(m.a);
+    const sc = simScore(hs, as);
     applyTable(G.table, m.h, m.a, sc[0], sc[1]);
-    creditAIScorers(m.h, sc[0]); creditAIScorers(m.a, sc[1]);
+    pushForm(m.h, sc[0] > sc[1] ? 'W' : sc[0] === sc[1] ? 'D' : 'L');
+    pushForm(m.a, sc[1] > sc[0] ? 'W' : sc[0] === sc[1] ? 'D' : 'L');
+    const ht = creditAIScorers(m.h, sc[0]), at = creditAIScorers(m.a, sc[1]);
     G.results.push({ round: round, h: m.h, a: m.a, hg: sc[0], ag: sc[1] });
+    // newsworthy events around the league
+    if (newsBudget > 0) {
+      const upset = (sc[0] > sc[1] && as - hs >= 8) || (sc[1] > sc[0] && hs - as >= 8);
+      if (upset && Math.random() < 0.45) {
+        const w = sc[0] > sc[1] ? m.h : m.a, l = sc[0] > sc[1] ? m.a : m.h;
+        addInbox('📰', 'Shock result: ' + CLUB_BY_KEY[w].name + ' beat ' + CLUB_BY_KEY[l].name + ' ' + Math.max(sc[0], sc[1]) + '-' + Math.min(sc[0], sc[1]) + '!', 'news');
+        newsBudget--;
+      } else if ((ht || at) && Math.random() < 0.55) {
+        addInbox('📰', (ht || at) + ' nets a hat-trick in ' + CLUB_BY_KEY[m.h].name + ' ' + sc[0] + '-' + sc[1] + ' ' + CLUB_BY_KEY[m.a].name + '.', 'news');
+        newsBudget--;
+      }
+    }
   });
+  // league-wide stories
+  if (round === 19 || round === 30 || round === 36) {
+    const t = tableSorted();
+    addInbox('📰', 'State of the league: ' + t[0].name + ' top on ' + t[0].pts + 'pts (' + (t[0].pts - t[1].pts) + ' clear of ' + t[1].name + '). In the drop zone: ' + t.slice(17).map(x => x.name).join(', ') + '.', 'news');
+  }
+  if (round >= 10 && Math.random() < 0.06) {
+    const strugglers = tableSorted().slice(15).filter(r => r.key !== G.club && !G.sackedMgrs[r.key]);
+    if (strugglers.length) {
+      const v = pick(strugglers);
+      G.sackedMgrs[v.key] = true;
+      addInbox('📰', v.name + ' have sacked their manager after a poor run of results.', 'news');
+    }
+  }
 }
 
 function tableSorted() {
@@ -106,6 +149,48 @@ function weeklyTick(days) {
     const fitPl = userSquad().filter(p => !p.injured);
     if (fitPl.length) injurePlayer(pick(fitPl), 'in training');
   }
+  // fringe stars get restless without minutes
+  const seasonMatches = G.userResults.length;
+  if (seasonMatches >= 6) {
+    userSquad().filter(p => !p.injured && !p.loan).sort((a, b) => b.r - a.r).slice(0, 13).forEach(p => {
+      if (p.apps < seasonMatches * 0.3) {
+        p.morale = clamp(p.morale - 2, 5, 99);
+        if (p.morale < 45 && !p.wantsOut && Math.random() < 0.10) {
+          p.wantsOut = true;
+          addInbox('😡', p.n + ' is unhappy with his lack of minutes and has requested a transfer.', 'squad');
+        }
+      } else if (p.wantsOut && p.apps >= seasonMatches * 0.5 && p.morale > 65) {
+        p.wantsOut = false;
+        addInbox('🤝', p.n + ' is enjoying his football again and withdraws his transfer request.', 'squad');
+      }
+    });
+  }
+  // reports from players out on loan
+  Object.values(PLAYERS).filter(p => p.club === G.club && p.loan).forEach(p => {
+    if (Math.random() < 0.12) {
+      addInbox('📨', 'Loan report: ' + p.n + pick([' scored at the weekend', ' impressed with an assist', ' is getting regular minutes', ' had a quiet game', ' was named man of the match']) + '.', 'loan');
+      if (Math.random() < 0.25 && p.r < p.pot) { p.r++; p.val = valueOf(p.r, p.age, p.pot); }
+    }
+  });
+}
+
+/* the rest of the league lives too: AI injuries heal and happen */
+function aiWeeklyTick(days) {
+  CLUBS.forEach(c => {
+    if (c.key === G.club) return;
+    const sq = squadOf(c.key);
+    sq.forEach(p => {
+      if (p.injured) { p.injD -= days; if (p.injD <= 0) { p.injured = false; p.injT = null; } }
+    });
+    if (sq.filter(p => p.injured).length < 4 && Math.random() < 0.10 * days / 7) {
+      const fit = sq.filter(p => !p.injured);
+      if (fit.length) {
+        const p = pick(fit), t = pick(INJ_TYPES);
+        p.injured = true; p.injT = t.n; p.injD = rnd(t.min, t.max) * 7;
+        if (p.r >= 87 && Math.random() < 0.7) addInbox('🏥', 'Blow for ' + c.name + ': ' + p.n + ' is out for ' + Math.ceil(p.injD / 7) + ' weeks (' + t.n.toLowerCase() + ').', 'news');
+      }
+    }
+  });
 }
 
 function injurePlayer(p, contextLabel) {
@@ -143,23 +228,65 @@ function runAITransfers() {
     }
   }
   // incoming bids can arrive any week while the window is open;
-  // transfer-listed players attract attention much faster
+  // transfer-listed players (or those agitating for a move) attract attention faster
   if (!G.pendingOffer) {
-    const hasListed = userSquad().some(p => p.listed && !p.injured);
+    const hasListed = userSquad().some(p => (p.listed || p.wantsOut) && !p.injured);
     if (Math.random() < (hasListed ? 0.6 : 0.25)) generateIncomingBid();
+  }
+  // targets you walked away from can be snapped up by rivals
+  Object.values(PLAYERS).forEach(p => {
+    if (p._hot && p.club !== G.club && Math.random() < 0.25) {
+      p._hot = false;
+      const to = pick(['Real Madrid', 'Barcelona', 'PSG', 'Bayern Munich', 'Atletico Madrid', 'Inter Milan'].filter(c => c !== p.clubName));
+      addInbox('📰', p.n + ' joins ' + to + ' for ' + money(Math.round(p.val * rndf(1.0, 1.35))) + ' — you missed out.', 'transfer');
+      if (p.club) p.club = null;
+      p.foreign = true; p.clubName = to;
+    }
+  });
+}
+
+/* ── wages ───────────────────────────────────────────────────── */
+function wageBill() { return userSquad().reduce((s, p) => s + p.wage, 0); }
+
+/* how keen a player is to join you (negative = reluctant) */
+function moveInterest(p) {
+  const me = userClub();
+  const fromStr = p.club ? CLUB_BY_KEY[p.club].str : (p.clubName ? euroStr(p.clubName) : 80);
+  let s = me.str - fromStr;
+  if (G.euro && ['league', 'po', 'r16', 'qf', 'sf', 'f'].indexOf(G.euro.phase) >= 0) s += 4;
+  if (G.plW + G.plD + G.plL >= 6 && leaguePos() <= 6) s += 3;
+  if (G.trophies.length) s += 2;
+  if (p.age <= 22) s += 5;
+  if (p.listed || p.wantsOut) s += 10;
+  return s;
+}
+
+/* ── youth intake day ────────────────────────────────────────── */
+function youthIntake() {
+  const c = userClub();
+  const n = rnd(2, 3);
+  for (let i = 0; i < n; i++) {
+    const age = rnd(16, 18);
+    const r = clamp(c.str - rnd(16, 26), 48, 70);
+    const pot = Math.min(96, r + rnd(8, Math.max(12, 22 + Math.round((c.str - 70) / 2))));
+    const p = mkPlayer(pick(FIRST_NAMES) + ' ' + pick(LAST_NAMES), pick(['GK', 'RB', 'CB', 'LB', 'DM', 'CM', 'AM', 'RW', 'LW', 'ST']), r, age, G.club, { pot: pot });
+    const nums = {}; userSquad().forEach(x => { nums[x.num] = true; });
+    let num = 40; while (nums[num]) num++; p.num = num;
+    PLAYERS[p.id] = p;
+    addInbox('🎓', 'Youth intake: ' + p.n + ' (' + p.p + ', ' + age + ') signs scholarship terms. Coaches rate his potential as ' + (pot >= 88 ? 'exceptional' : pot >= 80 ? 'high' : 'decent') + '.', 'youth');
   }
 }
 
 function generateIncomingBid() {
-  const targets = userSquad().filter(p => !p.injured && (p.listed || p.val >= 10));
+  const targets = userSquad().filter(p => !p.injured && (p.listed || p.wantsOut || p.val >= 10));
   if (!targets.length) return;
-  const weights = targets.map(p => (p.listed ? 10 : 1) * (p.contract <= 1 ? 2 : 1));
+  const weights = targets.map(p => ((p.listed || p.wantsOut) ? 10 : 1) * (p.contract <= 1 ? 2 : 1));
   const total = weights.reduce((s, w) => s + w, 0);
   let r = Math.random() * total, target = targets[0];
   for (let i = 0; i < targets.length; i++) { r -= weights[i]; if (r <= 0) { target = targets[i]; break; } }
   const richClubs = ['Real Madrid', 'Barcelona', 'PSG', 'Bayern Munich', 'Al-Hilal', 'Al-Nassr'].concat(
     CLUBS.filter(c => c.key !== G.club && c.bud >= 90).map(c => c.name));
-  const mult = target.listed ? rndf(0.95, 1.2) : rndf(1.0, 1.45);
+  const mult = (target.listed || target.wantsOut) ? rndf(0.95, 1.2) : rndf(1.0, 1.45);
   G.pendingOffer = { pid: target.id, club: pick(richClubs), amt: Math.round(target.val * mult) };
   addInbox('🔥', G.pendingOffer.club + ' bid ' + money(G.pendingOffer.amt) + ' for ' + target.n + '!', 'bid');
 }
@@ -262,33 +389,90 @@ function processSeasonEnd() {
   if (G.fa.won) { summary.trophies.push('FA Cup'); G.trophies.push('S' + G.season + ' FA Cup'); }
   if (G.lc.won) { summary.trophies.push('Carabao Cup'); G.trophies.push('S' + G.season + ' Carabao Cup'); }
   if (G.euro && G.euro.phase === 'won') { summary.trophies.push(EURO_CFG[G.euro.comp].label); G.trophies.push('S' + G.season + ' ' + EURO_CFG[G.euro.comp].label); }
+  // relegation: the bottom three go down (and take their manager with them)
+  summary.relegated = finalTable.slice(17).map(r => r.key);
+  G.lastRelegated = summary.relegated;
   // board verdict
   const tgt = boardTargetPos();
   const met = pos <= tgt || summary.trophies.length > 0;
   summary.met = met;
-  if (met) { G.boardConf = clamp(G.boardConf + 15, 0, 100); summary.boardVerdict = 'The board is delighted. Objectives achieved.'; }
+  if (pos >= 18) {
+    G.sacked = true;
+    summary.boardVerdict = 'Relegated. The board terminate your contract with immediate effect.';
+  } else if (met) { G.boardConf = clamp(G.boardConf + 15, 0, 100); summary.boardVerdict = 'The board is delighted. Objectives achieved.'; }
   else if (pos <= tgt + 3) { G.boardConf = clamp(G.boardConf - 5, 0, 100); summary.boardVerdict = 'The board expected better, but you keep your job — for now.'; }
   else { G.boardConf = clamp(G.boardConf - 25, 0, 100); summary.boardVerdict = 'A very poor season. The board is furious.'; if (G.boardConf <= 5) G.sacked = true; }
+  // a strong season attracts attention from bigger clubs
+  if (!G.sacked && met && (pos <= tgt - 2 || summary.trophies.length) && Math.random() < 0.5) {
+    const suitors = CLUBS.filter(c => c.key !== G.club && c.str >= userClub().str + 2);
+    if (suitors.length) summary.jobOffer = pick(suitors).key;
+  }
   // prize money + euro qualification for next season
   let prize = summary.prize;
   if (summary.trophies.length) prize += summary.trophies.length * 10;
   G.budget = Math.round(G.budget * 0.25 + prize * 0.6 + userClub().bud);
   summary.newBudget = G.budget;
+  if (summary.trophies.length) G.wageCap = Math.round(G.wageCap * 1.08);
   const newEuro = pos <= 5 ? 'UCL' : pos <= 7 ? 'UEL' : pos === 8 ? 'UECL' : null;
   summary.newEuro = newEuro;
   return { summary: summary, newEuro: newEuro };
 }
 
+/* a relegated AI club is replaced by a promoted Championship side */
+function promoteReplacement(key) {
+  const usedNames = CLUBS.map(c => c.name);
+  const cands = CHAMPIONSHIP.filter(t => usedNames.indexOf(t.name) < 0);
+  if (!cands.length) return;
+  const t = pick(cands);
+  const old = CLUB_BY_KEY[key];
+  addInbox('⬇️', old.name + ' are relegated to the Championship. ' + t.name + ' come up in their place.', 'news');
+  G.clubOverrides[key] = { name: t.name, full: t.full, stadium: t.stadium, col1: t.col1, col2: t.col2, str: t.str, bud: t.bud, exp: t.exp, euro: null };
+  applyClubOverrides();
+  // the old squad goes down with the club; build the promoted side's squad
+  Object.values(PLAYERS).forEach(p => { if (p.club === key) delete PLAYERS[p.id]; });
+  genSquadFor(CLUB_BY_KEY[key], true);
+  G.aiForm[key] = [];
+}
+
+/* take over a new club mid-season after being sacked */
+function takeJobMidSeason(key) {
+  const nc = CLUB_BY_KEY[key];
+  G.club = key; G.sacked = false;
+  G.boardConf = 50; G.morale = 60;
+  G.budget = Math.round(nc.bud * 0.4);
+  const t = G.table[key];
+  G.plW = t.w; G.plD = t.d; G.plL = t.l; G.plGF = t.gf; G.plGA = t.ga; G.pts = t.pts;
+  G.form = (G.aiForm[key] || []).slice();
+  G.trainFocus = []; G.instrs = [];
+  G.euro = null; G.pendingOffer = null; G.curFix = null;
+  autoPickXI();
+  G.wageCap = Math.max(Math.round(wageBill() * 1.2), wageBill() + 100);
+  addInbox('👔', 'You take over at ' + nc.full + ' mid-season. Board expectation: ' + nc.exp + '. Emergency transfer kitty: ' + money(G.budget) + '.', 'board');
+  saveGame();
+}
+
 /* Start the next season, keeping squads/budget/trophies. */
 function startNewSeason(newEuro) {
   developSquads();
+  // promotion & relegation
+  (G.lastRelegated || []).forEach(key => { if (key !== G.club) promoteReplacement(key); });
+  G.lastRelegated = null;
+  // moving to a new club over the summer
+  if (G.pendingJob) {
+    const nc = CLUB_BY_KEY[G.pendingJob];
+    G.club = G.pendingJob; G.pendingJob = null;
+    G.boardConf = 60; G.trainFocus = []; G.instrs = [];
+    G.budget = nc.bud; G.wageCap = 0;
+    addInbox('👔', 'A new chapter: you are the manager of ' + nc.full + '! The board expects: ' + nc.exp + '.', 'board');
+  }
   G.season++; G.ci = 0; G.lastDay = -3;
+  G.aiForm = {}; G.sackedMgrs = {};
   G.rounds = buildRounds();
   CLUBS.forEach(c => { G.table[c.key] = { p: 0, w: 0, d: 0, l: 0, gf: 0, ga: 0, pts: 0 }; });
   G.results = []; G.userResults = []; G.form = [];
   G.plW = 0; G.plD = 0; G.plL = 0; G.plGF = 0; G.plGA = 0; G.pts = 0;
-  G.fa = { round: 'R3', elim: false, won: false, res: {}, next: null };
-  G.lc = { round: 'R2', elim: false, won: false, res: {}, next: null };
+  G.fa = { round: 'R3', elim: false, won: false, res: {}, next: null, pot: null };
+  G.lc = { round: 'R2', elim: false, won: false, res: {}, next: null, pot: null };
   G.euro = buildEuro(newEuro);
   G.calendar = buildCalendar(G.euro ? EURO_CFG[G.euro.comp].mds : 0);
   G.aiWindowDone = false; G.pendingOffer = null; G.curFix = null;
@@ -302,6 +486,9 @@ function startNewSeason(newEuro) {
     p.club = null; p.free = true; p.clubName = 'Free Agent'; p.val = 0;
   });
   userSquad().filter(p => p.contract === 1).forEach(p => addInbox('📝', p.n + ' is in the final year of his contract. Renew or risk losing him.', 'contract'));
+  userSquad().forEach(p => { p.wantsOut = false; });
   topUpSquads();
   autoPickXI();
+  G.wageCap = Math.max(G.wageCap || 0, Math.round(wageBill() * 1.15), wageBill() + 120);
+  addInbox('🏦', 'Wage budget for the season: £' + G.wageCap + 'k/week (current bill £' + wageBill() + 'k).', 'board');
 }
