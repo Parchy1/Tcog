@@ -389,78 +389,127 @@ var UI = {
     gid('highlight-banner').textContent = 'Kick off! ' + me.name + ' vs ' + fix.opp;
     this.logMatch('ml-ev', "0' Kick off! " + this.compLabel(fix));
     this.setSpeed(1);
+    this.evQueue = [];
     this.nav('match');
     setTimeout(() => {
       const oppCols = fix.oppKey ? [CLUB_BY_KEY[fix.oppKey].col1, CLUB_BY_KEY[fix.oppKey].col2] : ['#888888', '#cc1010'];
       PITCH.init(gid('pitch-canvas'), G.tactic,
-        M.playing.map(id => { const p = playerById(id); return p ? p.n : '?'; }),
-        M.oppXI.map(p => p.n), [me.col1, me.col2], oppCols);
+        M.playing.map(id => { const p = playerById(id); return p ? { n: p.n, num: p.num } : { n: '?', num: 0 }; }),
+        M.oppXI.map((p, i) => ({ n: p.n, num: i + 1 })),
+        [me.col1, me.col2], oppCols, { user: me.name, opp: fix.opp });
       this.runLoop();
     }, 100);
   },
+  evQueue: [],
   runLoop() {
     if (this.raf) cancelAnimationFrame(this.raf);
     const loop = () => {
       if (!M || M.finished) { this.raf = null; return; }
       this.raf = requestAnimationFrame(loop);
       if (this.paused) { PITCH.draw(); return; }
+      // a highlight scene is playing — the clock waits for it
+      if (PITCH.busy()) {
+        PITCH.update();
+        if (this.speed >= 4) PITCH.update();
+        PITCH.draw();
+        return;
+      }
+      // start the next queued highlight
+      if (this.evQueue.length) { this.startScene(this.evQueue.shift()); PITCH.draw(); return; }
+      // gates fire only once all highlights have played out
+      if (M.min >= 45 && !this.htShown) {
+        this.htShown = true;
+        cancelAnimationFrame(this.raf); this.raf = null;
+        this.showHalfTime();
+        return;
+      }
+      if (M.min >= M.endMin) {
+        cancelAnimationFrame(this.raf); this.raf = null;
+        gid('btn-ft').disabled = false;
+        gid('btn-pause').disabled = true;
+        this.banner('', '⏱ Full time! ' + M.score[0] + ' — ' + M.score[1]);
+        setTimeout(() => this.fullTime(), 900);
+        return;
+      }
       for (let s = 0; s < this.speed; s++) {
         PITCH.update();
         this.minTimer++;
         if (this.minTimer >= this.TPM) {
           this.minTimer = 0;
-          if (M.min < M.endMin) {
-            const evs = matchMinute();
-            this.processEvents(evs);
-            gid('m-min').textContent = fmtMin(M.min);
-            this.updateMatchStats();
-            if (M.min === 45 && !this.htShown) {
-              this.htShown = true;
-              cancelAnimationFrame(this.raf); this.raf = null;
-              this.showHalfTime();
-              return;
-            }
-            if (M.min === 90 && M.endMin > 90) {
-              this.banner('', '⏱ ' + (M.endMin - 90) + ' minutes of added time.');
-              this.logMatch('ml-ev', "90' Fourth official signals " + (M.endMin - 90) + ' added minutes.');
-            }
-            if (M.min >= M.endMin) {
-              cancelAnimationFrame(this.raf); this.raf = null;
-              gid('btn-ft').disabled = false;
-              gid('btn-pause').disabled = true;
-              this.banner('', '⏱ Full time! ' + M.score[0] + ' — ' + M.score[1]);
-              setTimeout(() => this.fullTime(), 900);
-              return;
-            }
+          const evs = matchMinute();
+          gid('m-min').textContent = fmtMin(M.min);
+          this.updateMatchStats();
+          this.enqueueEvents(evs);
+          if (M.min === 90 && M.endMin > 90) {
+            this.banner('', '⏱ ' + (M.endMin - 90) + ' minutes of added time.');
+            this.logMatch('ml-ev', "90' Fourth official signals " + (M.endMin - 90) + ' added minutes.');
           }
+          // stop simulating this frame if something needs to play out
+          if (this.evQueue.length || M.min >= M.endMin || (M.min >= 45 && !this.htShown)) break;
         }
       }
       PITCH.draw();
     };
     this.raf = requestAnimationFrame(loop);
   },
-  processEvents(evs) {
+  /* big moments become pitch scenes; small ones print straight to the log */
+  enqueueEvents(evs) {
     evs.forEach(e => {
-      const minPrefix = fmtMin(M.min) + ' ';
-      if (e.type === 'var') { this.banner('yellow', e.text); this.logMatch('ml-yel', minPrefix + e.text); return; }
-      if (e.type === 'goal') {
-        PITCH.goalFlash();
-        this.banner('goal', e.text);
-        this.logMatch('ml-goal', minPrefix + e.text);
+      const mp = fmtMin(M.min) + ' ';
+      switch (e.type) {
+        case 'goal': case 'oppgoal': case 'chance': case 'oppchance': case 'var':
+          this.evQueue.push(e); break;
+        case 'penawarded':
+          this.banner(e.side === 0 ? 'goal' : 'danger', e.text);
+          this.logMatch(e.side === 0 ? 'ml-goal' : 'ml-opp', mp + e.text);
+          break;
+        case 'yellow':
+          PITCH.showCard('yellow', e.actor || '');
+          this.banner('yellow', e.text); this.logMatch('ml-yel', mp + e.text);
+          break;
+        case 'red':
+          PITCH.showCard('red', e.actor || '');
+          this.banner('danger', e.text); this.logMatch('ml-red', mp + e.text);
+          break;
+        case 'susp': this.logMatch('ml-yel', mp + e.text); break;
+        case 'injury': this.banner('yellow', e.text); this.logMatch('ml-inj', mp + e.text); break;
+        default: this.logMatch('ml-ev', mp + e.text);
+      }
+    });
+  },
+  sceneIntro(e) {
+    if (e.pen) return e.side === 0 ? e.actor + ' places the ball on the spot...' : M.fix.opp + ' have a penalty... ' + (e.actor || 'their taker') + ' steps up.';
+    if (e.side === 0) {
+      const carrier = e.assist || e.actor;
+      return pick([
+        carrier ? carrier + ' picks it up and drives at the back line...' : 'We spring forward...',
+        e.actor ? 'Space opens up — ' + e.actor + ' makes the run...' : 'A quick move down the flank...',
+        'Sharp passing — the defence is scrambling...'
+      ]);
+    }
+    return pick([
+      M.fix.opp + ' break at pace...',
+      M.fix.opp + ' work it dangerously into our half...',
+      'We lose it cheaply — ' + M.fix.opp + ' pour forward...'
+    ]);
+  },
+  startScene(e) {
+    const mp = fmtMin(M.min) + ' ';
+    this.logMatch('ml-ev', mp + this.sceneIntro(e));
+    this.banner(e.side === 0 ? '' : 'danger', e.side === 0 ? '⚡ Chance building...' : '⚠️ ' + M.fix.opp + ' attack...');
+    PITCH.playScene({ side: e.side || 0, outcome: e.outcome || 'wide', actor: e.actor, assist: e.assist, pen: e.pen }, () => {
+      if (e.type === 'goal' || e.type === 'oppgoal') {
         gid('m-score').textContent = M.score[0] + ' — ' + M.score[1];
         gid('m-scorers-inline').textContent = M.scorers.filter(s => s.side === 0).map(s => s.n + ' ' + s.min + "'").join(' · ');
-      } else if (e.type === 'oppgoal') {
-        PITCH.concededFlash();
-        this.banner('danger', e.text);
-        this.logMatch('ml-opp', minPrefix + e.text);
-        gid('m-score').textContent = M.score[0] + ' — ' + M.score[1];
-      } else if (e.type === 'chance') { this.banner('', e.text); this.logMatch('ml-ev', minPrefix + e.text); }
-      else if (e.type === 'oppchance') { this.banner('danger', e.text); this.logMatch('ml-ev', minPrefix + e.text); }
-      else if (e.type === 'yellow') { this.banner('yellow', e.text); this.logMatch('ml-yel', minPrefix + e.text); }
-      else if (e.type === 'red') { this.banner('danger', e.text); this.logMatch('ml-red', minPrefix + e.text); }
-      else if (e.type === 'susp') { this.logMatch('ml-yel', minPrefix + e.text); }
-      else if (e.type === 'injury') { this.banner('yellow', e.text); this.logMatch('ml-inj', minPrefix + e.text); }
-      else if (e.type === 'flavour') { this.logMatch('ml-ev', minPrefix + e.text); }
+        this.banner(e.type === 'goal' ? 'goal' : 'danger', e.text);
+        this.logMatch(e.type === 'goal' ? 'ml-goal' : 'ml-opp', mp + e.text);
+      } else if (e.type === 'var') {
+        this.banner('yellow', e.text); this.logMatch('ml-yel', mp + e.text);
+      } else {
+        this.banner(e.side === 0 ? '' : 'danger', e.text);
+        this.logMatch('ml-ev', mp + e.text);
+      }
+      this.updateMatchStats();
     });
   },
   updateMatchStats() {
