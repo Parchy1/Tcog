@@ -870,7 +870,7 @@ var UI = {
     const el = gid('tr-content');
     if (this.trTabSel === 'buy') {
       const posOpts = ['ALL', 'GK', 'RB', 'CB', 'LB', 'DM', 'CM', 'AM', 'RW', 'LW', 'ST'];
-      const lgOpts = ['ALL', 'Premier League', 'La Liga', 'Serie A', 'Bundesliga', 'Ligue 1', 'Other'];
+      const lgOpts = ['ALL', 'Premier League'].concat(Array.from(new Set(Object.values(FOREIGN_CLUB_LEAGUE))).sort());
       let html = '<div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap">' +
         '<input type="text" id="tr-search" placeholder="Search player or club..." value="' + esc(this.trSearch) + '" oninput="UI.trSearch=this.value;UI.renderTransfers()" style="background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:7px 12px;color:var(--text);font-family:inherit;width:220px">' +
         '<select style="width:100px;margin:0" onchange="UI.trPos=this.value;UI.renderTransfers()">' +

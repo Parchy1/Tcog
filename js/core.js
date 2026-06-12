@@ -102,6 +102,17 @@ function genSquads() {
     p.clubName = 'Free Agent'; p.val = 0; p.foreign = false; p.free = true;
     PLAYERS[p.id] = p;
   });
+  // the wider football world: full squads from the FC25 ratings database
+  if (typeof WORLD_PLAYERS !== 'undefined') {
+    WORLD_PLAYERS.forEach(s => {
+      const extra = { foreign: true, contract: rnd(1, 4) };
+      if (s[5]) { extra.pac = s[5]; extra.sho = s[6]; extra.pas = s[7]; extra.dri = s[8]; extra.def = s[9]; extra.phy = s[10]; }
+      const p = mkPlayer(s[0], s[1], s[2], s[3], null, extra);
+      p.clubName = s[4];
+      p.league = FOREIGN_CLUB_LEAGUE[s[4]] || 'Other';
+      PLAYERS[p.id] = p;
+    });
+  }
 }
 
 /* ── fixtures: real 2025/26 list in season 1, circle method after ── */

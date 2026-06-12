@@ -356,23 +356,22 @@ function developSquads() {
   });
 }
 
-/* fill any club back up to the squad template with academy graduates */
-function topUpSquads() {
-  CLUBS.forEach(c => {
-    const squad = squadOf(c.key);
-    Object.keys(SQUAD_TEMPLATE).forEach(pos => {
-      const have = squad.filter(p => p.p === pos).length;
-      for (let i = have; i < SQUAD_TEMPLATE[pos]; i++) {
-        const age = rnd(17, 21);
-        const r = clamp(c.str - rnd(8, 16), 50, 90);
-        const np = mkPlayer(pick(FIRST_NAMES) + ' ' + pick(LAST_NAMES), pos, r, age, c.key);
-        np.num = rnd(30, 79);
-        PLAYERS[np.id] = np;
-        if (c.key === G.club) addInbox('🎓', np.n + ' (' + np.p + ', ' + np.age + ') promoted from the academy.', 'youth');
-      }
-    });
+/* fill a club back up to the squad template with academy graduates */
+function topUpClub(c) {
+  const squad = squadOf(c.key);
+  Object.keys(SQUAD_TEMPLATE).forEach(pos => {
+    const have = squad.filter(p => p.p === pos).length;
+    for (let i = have; i < SQUAD_TEMPLATE[pos]; i++) {
+      const age = rnd(17, 21);
+      const r = clamp(c.str - rnd(8, 16), 50, 90);
+      const np = mkPlayer(pick(FIRST_NAMES) + ' ' + pick(LAST_NAMES), pos, r, age, c.key);
+      np.num = rnd(30, 79);
+      PLAYERS[np.id] = np;
+      if (c.key === G.club) addInbox('🎓', np.n + ' (' + np.p + ', ' + np.age + ') promoted from the academy.', 'youth');
+    }
   });
 }
+function topUpSquads() { CLUBS.forEach(topUpClub); }
 
 function prizeMoneyFor(pos) {
   return Math.max(5, Math.round(46 - (pos - 1) * 2.2));
@@ -430,9 +429,20 @@ function promoteReplacement(key) {
   addInbox('⬇️', old.name + ' are relegated to the Championship. ' + t.name + ' come up in their place.', 'news');
   G.clubOverrides[key] = { name: t.name, full: t.full, stadium: t.stadium, col1: t.col1, col2: t.col2, str: t.str, bud: t.bud, exp: t.exp, euro: null };
   applyClubOverrides();
-  // the old squad goes down with the club; build the promoted side's squad
+  // the old squad goes down with the club; the promoted side brings its
+  // real players from the world database where we have them
   Object.values(PLAYERS).forEach(p => { if (p.club === key) delete PLAYERS[p.id]; });
-  genSquadFor(CLUB_BY_KEY[key], true);
+  const tn = t.name.toLowerCase(), tf = t.full.toLowerCase();
+  let num = 1;
+  Object.values(PLAYERS).forEach(p => {
+    if (!p.foreign || !p.clubName) return;
+    const cn = p.clubName.toLowerCase();
+    if (cn === tn || cn === tf || cn.indexOf(tn) === 0 || tf.indexOf(cn) === 0) {
+      p.club = key; p.foreign = false; p.clubName = null; p.league = null;
+      p.num = num++;
+    }
+  });
+  topUpClub(CLUB_BY_KEY[key]);
   G.aiForm[key] = [];
 }
 
