@@ -57,7 +57,7 @@ const RIVALS = {
 const STARS = {
   NEW: [], // Newcastle uses the full detailed squad below
   ARS: [['Raya','GK',89,30],['Saliba','CB',91,24],['Gabriel','CB',88,27],['Timber','RB',85,24],['Calafiori','LB',84,23],['White','RB',83,28],['Zubimendi','DM',87,26],['Rice','DM',88,26],['Odegaard','AM',88,27],['Eze','AM',85,27],['Saka','RW',90,24],['Martinelli','LW',85,24],['Madueke','RW',83,23],['Gyokeres','ST',91,27],['Havertz','ST',85,26],['Trossard','LW',82,30],['Lewis-Skelly','LB',80,19],['Nwaneri','AM',78,18]],
-  MCI: [['Ederson','GK',87,32],['Dias','CB',88,28],['Stones','CB',85,31],['Gvardiol','LB',86,23],['Lewis','RB',81,21],['Ake','CB',83,30],['Rodri','DM',91,29],['Kovacic','CM',83,31],['Reijnders','CM',86,27],['B.Silva','AM',87,31],['Foden','AM',87,25],['Cherki','AM',84,22],['Doku','LW',83,23],['Savinho','RW',83,21],['Marmoush','ST',85,26],['Haaland','ST',96,25],['Bobb','RW',79,22]],
+  MCI: [['Donnarumma','GK',89,26],['Dias','CB',88,28],['Stones','CB',85,31],['Gvardiol','LB',86,23],['Lewis','RB',81,21],['Ake','CB',83,30],['Rodri','DM',91,29],['Kovacic','CM',83,31],['Reijnders','CM',86,27],['B.Silva','AM',87,31],['Foden','AM',87,25],['Cherki','AM',84,22],['Doku','LW',83,23],['Savinho','RW',83,21],['Marmoush','ST',85,26],['Haaland','ST',96,25],['Bobb','RW',79,22]],
   LIV: [['Alisson','GK',90,33],['Van Dijk','CB',90,34],['Konate','CB',85,26],['Frimpong','RB',84,24],['Kerkez','LB',84,22],['Gomez','CB',81,28],['Gravenberch','DM',87,23],['Mac Allister','CM',88,27],['Szoboszlai','CM',86,25],['Jones','CM',81,24],['Wirtz','AM',93,22],['Salah','RW',91,33],['Gakpo','LW',85,26],['Chiesa','RW',81,28],['Ekitike','ST',86,23],['Nunez','ST',83,26]],
   CHE: [['Sanchez','GK',84,28],['Colwill','CB',85,22],['Chalobah','CB',83,26],['James','RB',86,26],['Cucurella','LB',85,27],['Gusto','RB',82,22],['Caicedo','DM',87,24],['Fernandez','CM',86,24],['Lavia','DM',82,21],['Palmer','AM',91,23],['Neto','RW',84,25],['Garnacho','LW',83,21],['Gittens','LW',82,21],['Joao Pedro','ST',85,24],['Delap','ST',82,22],['Estevao','RW',83,18]],
   TOT: [['Vicario','GK',84,29],['Romero','CB',87,27],['Van de Ven','CB',86,24],['Porro','RB',84,26],['Udogie','LB',83,23],['Danso','CB',80,27],['Bentancur','CM',83,28],['Sarr','CM',82,23],['Bergvall','CM',81,19],['Palhinha','DM',83,30],['Simons','AM',85,22],['Kudus','RW',84,25],['Odobert','LW',79,21],['Richarlison','ST',82,28],['Solanke','ST',83,28],['Tel','ST',79,20]],
@@ -106,21 +106,109 @@ const NUFC_SQUAD = [
   { n: 'Woltemade',   p: 'ST', r: 83, pac: 76, sho: 80, pas: 72, dri: 76, def: 44, phy: 80, num: 27, val: 42,  age: 23, contract: 3, pot: 87 }
 ];
 
-/* Star players at non-PL clubs — available on the transfer market */
-const EURO_STARS = [
+/* ── The world beyond the Premier League ─────────────────────────
+   Clubs by league (name → strength) and notable players: 2025/26 squads.
+   Player rows: [name, pos, rating, age, club, potential?] —
+   an explicit potential marks a wonderkid. */
+const FOREIGN_LEAGUES = {
+  'La Liga': { 'Real Madrid': 94, 'Barcelona': 92, 'Atletico Madrid': 87, 'Athletic Club': 81, 'Villarreal': 81, 'Real Betis': 79, 'Real Sociedad': 78, 'Sevilla': 76, 'Valencia': 75, 'Celta Vigo': 75, 'Girona': 73 },
+  'Serie A': { 'Inter Milan': 88, 'Napoli': 87, 'AC Milan': 86, 'Juventus': 85, 'Atalanta': 83, 'Roma': 83, 'Bologna': 79, 'Lazio': 79, 'Fiorentina': 78, 'Como': 77 },
+  'Bundesliga': { 'Bayern Munich': 93, 'Leverkusen': 84, 'Dortmund': 84, 'RB Leipzig': 81, 'Frankfurt': 81, 'Stuttgart': 80, 'Freiburg': 77, 'Mainz': 74 },
+  'Ligue 1': { 'PSG': 93, 'Marseille': 81, 'Monaco': 80, 'Lille': 78, 'Lyon': 78, 'Nice': 76, 'Strasbourg': 76, 'Rennes': 75, 'Lens': 75 },
+  'Other': { 'Benfica': 82, 'Sporting CP': 82, 'Porto': 81, 'PSV': 80, 'Galatasaray': 79, 'Ajax': 78, 'Fenerbahce': 78, 'Feyenoord': 78, 'Al-Hilal': 78, 'Al-Nassr': 77, 'Flamengo': 76, 'Palmeiras': 75, 'Celtic': 75, 'River Plate': 74, 'Inter Miami': 72, 'Santos': 70, 'Club Tijuana': 62 }
+};
+const FOREIGN_CLUB_LEAGUE = {}, FOREIGN_CLUB_STR = {};
+Object.keys(FOREIGN_LEAGUES).forEach(lg => {
+  Object.keys(FOREIGN_LEAGUES[lg]).forEach(n => { FOREIGN_CLUB_LEAGUE[n] = lg; FOREIGN_CLUB_STR[n] = FOREIGN_LEAGUES[lg][n]; });
+});
+
+const FOREIGN_PLAYERS = [
+  /* ── La Liga ── */
   ['Mbappe','ST',95,26,'Real Madrid'],['Vinicius Jr','LW',93,25,'Real Madrid'],['Bellingham','CM',92,22,'Real Madrid'],['Courtois','GK',91,33,'Real Madrid'],
-  ['Yamal','RW',95,18,'Barcelona'],['Pedri','CM',90,23,'Barcelona'],['Raphinha','LW',89,29,'Barcelona'],['Balde','LB',85,22,'Barcelona'],
-  ['Kane','ST',93,32,'Bayern Munich'],['Musiala','AM',88,22,'Bayern Munich'],['Olise','RW',88,23,'Bayern Munich'],['Kimmich','DM',87,30,'Bayern Munich'],
-  ['Kvaratskhelia','LW',87,24,'PSG'],['Doue','AM',87,20,'PSG'],['Hakimi','RB',89,26,'PSG'],['Vitinha','CM',88,25,'PSG'],['Joao Neves','CM',86,21,'PSG'],['Barcola','LW',84,23,'PSG'],['Huijsen','CB',83,20,'Real Madrid'],
-  ['L.Martinez','ST',88,28,'Inter Milan'],['Bastoni','CB',87,26,'Inter Milan'],['Barella','CM',86,28,'Inter Milan'],
-  ['Leao','LW',86,26,'AC Milan'],['Pulisic','RW',85,27,'AC Milan'],['Theo Hernandez','LB',85,28,'AC Milan'],['Camarda','ST',74,17,'AC Milan'],
-  ['Guirassy','ST',86,29,'Dortmund'],['Adeyemi','LW',84,23,'Dortmund'],['Schlotterbeck','CB',84,26,'Dortmund'],
-  ['Schick','ST',85,29,'Leverkusen'],['Grimaldo','LB',85,30,'Leverkusen'],['Tah','CB',84,29,'Bayern Munich'],
-  ['Alvarez','ST',88,25,'Atletico Madrid'],['Griezmann','AM',84,34,'Atletico Madrid'],['Oblak','GK',88,32,'Atletico Madrid'],
-  ['Osimhen','ST',88,26,'Galatasaray'],['Gyokeres? no','ST',1,1,'x'],['Vlahovic','ST',85,25,'Juventus'],['Yildiz','AM',85,20,'Juventus'],
-  ['Zubeldia','CB',81,28,'Real Sociedad'],['Greenwood','RW',84,24,'Marseille'],['David','ST',84,25,'Juventus'],['Sane','RW',83,29,'Galatasaray'],
-  ['Donnarumma','GK',89,26,'Man City? no']
-].filter(s => s[2] > 1 && s[4].indexOf('?') < 0);
+  ['Valverde','CM',89,27,'Real Madrid'],['Alexander-Arnold','RB',86,27,'Real Madrid'],['Tchouameni','DM',86,25,'Real Madrid'],['Rodrygo','RW',86,24,'Real Madrid'],
+  ['Militao','CB',85,27,'Real Madrid'],['Rudiger','CB',84,32,'Real Madrid'],['Huijsen','CB',84,20,'Real Madrid',91],['Arda Guler','AM',84,20,'Real Madrid',92],
+  ['Carreras','LB',82,22,'Real Madrid',87],['Mastantuono','RW',79,18,'Real Madrid',93],['Endrick','ST',78,19,'Real Madrid',91],
+  ['Yamal','RW',95,18,'Barcelona',98],['Pedri','CM',91,23,'Barcelona'],['Raphinha','LW',89,29,'Barcelona'],['Lewandowski','ST',87,37,'Barcelona'],
+  ['Kounde','RB',86,26,'Barcelona'],['F.de Jong','CM',86,28,'Barcelona'],['Joan Garcia','GK',85,24,'Barcelona',90],['Cubarsi','CB',85,18,'Barcelona',94],
+  ['Balde','LB',85,22,'Barcelona'],['Olmo','AM',85,27,'Barcelona'],['Rashford','LW',83,28,'Barcelona'],['Ferran Torres','ST',83,25,'Barcelona'],
+  ['Fermin','AM',83,22,'Barcelona',88],['Gavi','CM',83,21,'Barcelona',89],
+  ['Alvarez','ST',89,25,'Atletico Madrid'],['Oblak','GK',88,32,'Atletico Madrid'],['Barrios','DM',85,22,'Atletico Madrid',90],['Baena','AM',84,24,'Atletico Madrid'],
+  ['Le Normand','CB',83,28,'Atletico Madrid'],['Llorente','RB',83,30,'Atletico Madrid'],['Griezmann','AM',83,34,'Atletico Madrid'],['Hancko','CB',82,27,'Atletico Madrid'],
+  ['Almada','AM',82,24,'Atletico Madrid'],['Sorloth','ST',81,29,'Atletico Madrid'],['G.Simeone','RW',80,22,'Atletico Madrid'],
+  ['Nico Williams','LW',87,23,'Athletic Club'],['Unai Simon','GK',84,28,'Athletic Club'],['Sancet','AM',82,25,'Athletic Club'],['Vivian','CB',82,26,'Athletic Club'],
+  ['Pepe','RW',81,24,'Villarreal'],['Mikautadze','ST',80,25,'Villarreal'],['Foyth','CB',79,27,'Villarreal'],
+  ['Antony','RW',83,25,'Real Betis'],['Isco','AM',82,33,'Real Betis'],['Lo Celso','AM',80,29,'Real Betis'],
+  ['Oyarzabal','ST',84,28,'Real Sociedad'],['Take Kubo','RW',83,24,'Real Sociedad'],['Remiro','GK',82,30,'Real Sociedad'],['Zubeldia','CB',81,28,'Real Sociedad'],
+  ['Vargas','RW',78,27,'Sevilla'],['Agoume','DM',78,23,'Sevilla'],
+  ['Javi Guerra','CM',80,22,'Valencia',87],['Diego Lopez','RW',78,24,'Valencia'],
+  ['Iago Aspas','ST',78,38,'Celta Vigo'],['Tsygankov','RW',78,28,'Girona'],
+  /* ── Serie A ── */
+  ['L.Martinez','ST',89,28,'Inter Milan'],['Bastoni','CB',88,26,'Inter Milan'],['Barella','CM',87,28,'Inter Milan'],['Thuram','ST',87,28,'Inter Milan'],
+  ['Calhanoglu','DM',86,31,'Inter Milan'],['Dumfries','RB',84,29,'Inter Milan'],['Dimarco','LB',84,27,'Inter Milan'],['Sommer','GK',84,36,'Inter Milan'],
+  ['Pio Esposito','ST',78,20,'Inter Milan',89],
+  ['De Bruyne','AM',88,34,'Napoli'],['McTominay','CM',86,28,'Napoli'],['Anguissa','DM',84,29,'Napoli'],['Buongiorno','CB',84,26,'Napoli'],
+  ['Lobotka','DM',84,30,'Napoli'],['Lukaku','ST',83,32,'Napoli'],['Hojlund','ST',82,22,'Napoli',88],['Neres','LW',82,28,'Napoli'],
+  ['Politano','RW',81,32,'Napoli'],['Beukema','CB',81,26,'Napoli'],['V.Milinkovic','GK',81,28,'Napoli'],
+  ['Maignan','GK',87,30,'AC Milan'],['Leao','LW',87,26,'AC Milan'],['Pulisic','RW',86,27,'AC Milan'],['Modric','CM',84,40,'AC Milan'],
+  ['Rabiot','CM',84,30,'AC Milan'],['Nkunku','AM',82,27,'AC Milan'],['Tomori','CB',82,27,'AC Milan'],['Fofana','CM',81,26,'AC Milan'],
+  ['Pavlovic','CB',81,24,'AC Milan'],['Gimenez','ST',80,24,'AC Milan'],['Saelemaekers','RW',80,26,'AC Milan'],['Estupinan','LB',79,27,'AC Milan'],
+  ['Camarda','ST',74,17,'AC Milan',90],
+  ['Yildiz','AM',86,20,'Juventus',93],['Bremer','CB',86,28,'Juventus'],['Vlahovic','ST',84,25,'Juventus'],['David','ST',83,25,'Juventus'],
+  ['Di Gregorio','GK',83,28,'Juventus'],['K.Thuram','CM',83,24,'Juventus',88],['Locatelli','DM',82,27,'Juventus'],['Cambiaso','LB',82,25,'Juventus'],
+  ['Openda','ST',81,25,'Juventus'],['Conceicao','RW',81,22,'Juventus'],
+  ['Lookman','LW',85,28,'Atalanta'],['Ederson','CM',84,26,'Atalanta'],['De Ketelaere','AM',84,24,'Atalanta'],['Carnesecchi','GK',82,25,'Atalanta'],
+  ['Hien','CB',82,26,'Atalanta'],['Scamacca','ST',81,26,'Atalanta'],
+  ['Svilar','GK',85,26,'Roma'],['Dybala','AM',83,31,'Roma'],['Ndicka','CB',83,26,'Roma'],['Kone','CM',83,24,'Roma'],
+  ['Soule','RW',82,22,'Roma',88],['Pellegrini','AM',80,29,'Roma'],['Wesley','RB',79,21,'Roma',86],['Ferguson','ST',78,20,'Roma',87],
+  ['Orsolini','RW',82,28,'Bologna'],['Freuler','CM',80,33,'Bologna'],['Lucumi','CB',80,27,'Bologna'],['Castro','ST',79,21,'Bologna',86],
+  ['Rovella','DM',82,23,'Lazio'],['Zaccagni','LW',81,30,'Lazio'],['Gila','CB',81,25,'Lazio'],['Castellanos','ST',80,27,'Lazio'],['Isaksen','RW',79,24,'Lazio'],
+  ['Kean','ST',84,25,'Fiorentina'],['De Gea','GK',83,35,'Fiorentina'],['Gudmundsson','AM',81,28,'Fiorentina'],['Dodo','RB',81,26,'Fiorentina'],
+  ['Nico Paz','AM',85,21,'Como',93],['Morata','ST',80,33,'Como'],['Diao','RW',79,20,'Como',88],['Caqueret','CM',79,25,'Como'],
+  /* ── Bundesliga ── */
+  ['Kane','ST',93,32,'Bayern Munich'],['Olise','RW',89,23,'Bayern Munich'],['Musiala','AM',88,22,'Bayern Munich',94],['Kimmich','DM',87,30,'Bayern Munich'],
+  ['Luis Diaz','LW',86,28,'Bayern Munich'],['Upamecano','CB',85,26,'Bayern Munich'],['Neuer','GK',84,39,'Bayern Munich'],['Tah','CB',84,29,'Bayern Munich'],
+  ['A.Pavlovic','CM',84,21,'Bayern Munich',90],['Gnabry','AM',82,30,'Bayern Munich'],['Jackson','ST',80,24,'Bayern Munich'],['Karl','AM',75,17,'Bayern Munich',92],
+  ['Grimaldo','LB',85,30,'Leverkusen'],['Schick','ST',84,29,'Leverkusen'],['Bade','CB',82,25,'Leverkusen'],['Andrich','DM',80,30,'Leverkusen'],
+  ['Tillman','AM',80,23,'Leverkusen'],['Flekken','GK',80,32,'Leverkusen'],['Echeverri','AM',78,19,'Leverkusen',90],['Kofane','ST',76,19,'Leverkusen',85],
+  ['Guirassy','ST',86,29,'Dortmund'],['Schlotterbeck','CB',85,25,'Dortmund'],['Kobel','GK',85,27,'Dortmund'],['Adeyemi','LW',84,23,'Dortmund'],
+  ['Brandt','AM',82,29,'Dortmund'],['Nmecha','CM',80,26,'Dortmund'],['Ryerson','RB',79,27,'Dortmund'],['J.Bellingham','CM',79,20,'Dortmund',89],
+  ['Nusa','LW',80,20,'RB Leipzig',89],['Orban','CB',80,32,'RB Leipzig'],['Bakayoko','RW',79,22,'RB Leipzig'],['Romulo','ST',79,23,'RB Leipzig'],
+  ['Gulacsi','GK',79,35,'RB Leipzig'],['Ouedraogo','CM',78,19,'RB Leipzig',89],
+  ['Burkardt','ST',81,25,'Frankfurt'],['Larsson','CM',81,21,'Frankfurt',88],['Koch','CB',81,29,'Frankfurt'],['Knauff','RW',80,23,'Frankfurt'],
+  ['Theate','CB',80,25,'Frankfurt'],['Uzun','AM',79,19,'Frankfurt',88],
+  ['Stiller','DM',83,24,'Stuttgart'],['Undav','ST',82,29,'Stuttgart'],['Demirovic','ST',81,27,'Stuttgart'],['Nubel','GK',81,29,'Stuttgart'],['Leweling','RW',80,24,'Stuttgart'],
+  ['Atubolu','GK',80,23,'Freiburg',86],['Grifo','LW',79,32,'Freiburg'],['Adamu','ST',78,24,'Freiburg'],
+  ['Hollerbach','ST',77,24,'Mainz'],['Zentner','GK',77,31,'Mainz'],
+  /* ── Ligue 1 ── */
+  ['Dembele','RW',91,28,'PSG'],['Hakimi','RB',89,26,'PSG'],['Vitinha','CM',88,25,'PSG'],['Kvaratskhelia','LW',87,24,'PSG'],
+  ['Nuno Mendes','LB',87,23,'PSG'],['Doue','AM',87,20,'PSG',93],['Marquinhos','CB',86,31,'PSG'],['Joao Neves','CM',86,21,'PSG',92],
+  ['Chevalier','GK',85,24,'PSG'],['Pacho','CB',84,24,'PSG'],['Barcola','LW',84,23,'PSG'],['Ramos','ST',83,24,'PSG'],
+  ['Zaire-Emery','CM',83,19,'PSG',91],['Mayulu','AM',78,19,'PSG',88],['Mbaye','RW',75,17,'PSG',90],
+  ['Greenwood','RW',85,24,'Marseille'],['Rulli','GK',83,33,'Marseille'],['Hojbjerg','CM',82,30,'Marseille'],['Balerdi','CB',82,26,'Marseille'],
+  ['Paixao','LW',81,25,'Marseille'],['Aubameyang','ST',80,36,'Marseille'],['Gouiri','ST',80,25,'Marseille'],["O'Riley",'CM',80,24,'Marseille'],
+  ['Akliouche','AM',83,23,'Monaco',89],['Golovin','AM',81,29,'Monaco'],['Balogun','ST',80,24,'Monaco'],['Minamino','AM',80,30,'Monaco'],
+  ['Dier','CB',79,31,'Monaco'],['Hradecky','GK',79,35,'Monaco'],['Pogba','CM',78,32,'Monaco'],['Fati','ST',78,22,'Monaco'],
+  ['Giroud','ST',78,39,'Lille'],['Ozer','GK',79,25,'Lille'],['Bouaddi','DM',78,18,'Lille',88],['Fernandez-Pardo','LW',77,20,'Lille',86],
+  ['M.Fofana','RW',80,26,'Lyon'],['Tolisso','CM',80,31,'Lyon'],['Niakhate','CB',79,29,'Lyon'],['Sulc','AM',79,24,'Lyon'],
+  ['Clauss','RB',80,32,'Nice'],['Moffi','ST',79,26,'Nice'],['Boga','LW',79,28,'Nice'],
+  ['Emegha','ST',80,22,'Strasbourg',87],['Panichelli','ST',79,22,'Strasbourg'],['Paez','AM',77,18,'Strasbourg',90],['Penders','GK',77,20,'Strasbourg',87],
+  ['Samba','GK',81,30,'Rennes'],['Embolo','ST',79,28,'Rennes'],['Thauvin','AM',79,32,'Lens'],
+  /* ── Rest of the world ── */
+  ['Sudakov','AM',83,23,'Benfica',88],['Trubin','GK',83,24,'Benfica'],['Pavlidis','ST',82,27,'Benfica'],['Aursnes','CM',80,29,'Benfica'],['Ivanovic','ST',79,21,'Benfica'],
+  ['Goncalves','AM',83,27,'Sporting CP'],['Hjulmand','DM',82,26,'Sporting CP'],['Trincao','RW',81,25,'Sporting CP'],['L.Suarez','ST',81,24,'Sporting CP'],['Quenda','RW',80,18,'Sporting CP',91],
+  ['Diogo Costa','GK',85,26,'Porto'],['Veiga','CM',81,23,'Porto'],['Rodrigo Mora','AM',80,18,'Porto',92],['Froholdt','CM',79,19,'Porto',87],
+  ['Saibari','AM',81,24,'PSV'],['Veerman','CM',81,27,'PSV'],['Dest','RB',80,24,'PSV'],['Flamingo','CB',80,22,'PSV'],
+  ['Osimhen','ST',88,26,'Galatasaray'],['Sane','RW',83,29,'Galatasaray'],['Gundogan','CM',82,35,'Galatasaray'],['Torreira','DM',81,29,'Galatasaray'],['Icardi','ST',79,32,'Galatasaray'],
+  ['Taylor','CM',79,24,'Ajax'],['Godts','LW',77,20,'Ajax',85],
+  ['En-Nesyri','ST',81,28,'Fenerbahce'],['Skriniar','CB',81,30,'Fenerbahce'],['Szymanski','AM',80,26,'Fenerbahce'],
+  ['Timber','CM',80,24,'Feyenoord'],['Watanabe','CB',79,26,'Feyenoord'],['Moussa','ST',78,21,'Feyenoord'],
+  ['Theo Hernandez','LB',84,28,'Al-Hilal'],['R.Neves','DM',84,28,'Al-Hilal'],['S.Milinkovic','CM',82,30,'Al-Hilal'],['Koulibaly','CB',81,34,'Al-Hilal'],
+  ['Ronaldo','ST',85,40,'Al-Nassr'],['Felix','AM',81,25,'Al-Nassr'],['Brozovic','DM',80,32,'Al-Nassr'],['Mane','LW',79,33,'Al-Nassr'],
+  ['Messi','AM',87,38,'Inter Miami'],['De Paul','CM',83,31,'Inter Miami'],
+  ['Pedro','ST',81,28,'Flamengo'],['Vitor Roque','ST',78,20,'Palmeiras',87],['Estevao Jr','LW',74,16,'Palmeiras',90],
+  ['Neymar','AM',83,33,'Santos'],['Mastantuono Jr','AM',73,16,'River Plate',88],['Gilberto Mora','AM',75,17,'Club Tijuana',92],
+  ['Maeda','LW',79,27,'Celtic'],['Engels','CM',77,21,'Celtic',84]
+];
 
 const FREE_AGENTS = [
   ['De Vrij','CB',80,33],['Lloris','GK',76,38],['Rabiot','CM',82,30],['Depay','ST',80,31],['Dybala','AM',83,32],['Goretzka','CM',82,30],['Sergi Roberto','CM',76,33],['Mariano','ST',72,32]

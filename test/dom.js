@@ -57,7 +57,7 @@ function assert(cond, msg) { if (!cond) { failures++; console.error('  ✗ FAIL:
   // transfer tabs + a negotiation (fee, then personal terms)
   try {
     w.UI.nav('transfers');
-    w.UI.trTab('free'); w.UI.trTab('sell'); w.UI.trTab('buy');
+    w.UI.trTab('wonder'); w.UI.trTab('free'); w.UI.trTab('sell'); w.UI.trTab('buy');
     // pick a non-key squad player from a weaker club so the deal is realistic
     const CLUB_BY_KEY = w.eval('CLUB_BY_KEY');
     const target = Object.values(w.PLAYERS).find(p => {

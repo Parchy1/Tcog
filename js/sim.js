@@ -214,6 +214,7 @@ function runAITransfers() {
       p._moved = true; const to = pick(buyers);
       addInbox('💰', to + ' sign ' + p.n + ' from ' + p.clubName + ' for ' + money(Math.round(p.val * rndf(0.9, 1.3))) + '.', 'transfer');
       p.clubName = to;
+      p.league = FOREIGN_CLUB_LEAGUE[to] || p.league || 'Other';
     });
     // PL clubs trade among themselves
     for (let i = 0; i < rnd(1, 2); i++) {
@@ -241,6 +242,7 @@ function runAITransfers() {
       addInbox('📰', p.n + ' joins ' + to + ' for ' + money(Math.round(p.val * rndf(1.0, 1.35))) + ' — you missed out.', 'transfer');
       if (p.club) p.club = null;
       p.foreign = true; p.clubName = to;
+      p.league = FOREIGN_CLUB_LEAGUE[to] || 'Other';
     }
   });
 }

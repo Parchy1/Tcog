@@ -88,10 +88,13 @@ function genSquadFor(club, skipStars) {
 function genSquads() {
   PLAYERS = {}; NEXT_ID = 1;
   CLUBS.forEach(club => genSquadFor(club, false));
-  // star players at non-PL clubs (transfer targets)
-  EURO_STARS.forEach(s => {
-    const p = mkPlayer(s[0], s[1], s[2], s[3], null, { foreign: true, contract: rnd(2, 4) });
+  // notable players across the top leagues (transfer targets)
+  FOREIGN_PLAYERS.forEach(s => {
+    const extra = { foreign: true, contract: rnd(2, 4) };
+    if (s[5] !== undefined) extra.pot = s[5];
+    const p = mkPlayer(s[0], s[1], s[2], s[3], null, extra);
     p.clubName = s[4];
+    p.league = FOREIGN_CLUB_LEAGUE[s[4]] || 'Other';
     PLAYERS[p.id] = p;
   });
   FREE_AGENTS.forEach(s => {
@@ -172,6 +175,7 @@ function euroStr(name) {
   const c = CLUBS.find(cl => cl.name === name);
   if (c) return clubEffStr(c.key);
   for (const k in EURO_CFG) { if (EURO_CFG[k].pool[name]) return EURO_CFG[k].pool[name]; }
+  if (FOREIGN_CLUB_STR[name]) return FOREIGN_CLUB_STR[name];
   return 75;
 }
 function clubEffStr(key) {

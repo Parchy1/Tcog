@@ -793,12 +793,23 @@ var UI = {
   /* ═════════ TRANSFERS ═════════ */
   trTab(t) {
     this.trTabSel = t;
-    ['buy', 'free', 'sell'].forEach(k => { gid('tr-t-' + k).className = 'tab' + (k === t ? ' on' : ''); });
+    ['buy', 'wonder', 'free', 'sell'].forEach(k => { gid('tr-t-' + k).className = 'tab' + (k === t ? ' on' : ''); });
     this.renderTransfers();
   },
-  trSearch: '', trPos: 'ALL',
+  trSearch: '', trPos: 'ALL', trLeague: 'ALL',
+  leagueOf(p) { return p.club ? 'Premier League' : (p.league || 'Other'); },
+  marketRow(p) {
+    const clubName = p.club ? CLUB_BY_KEY[p.club].name : p.clubName;
+    return '<div class="list-row"><span class="tag tag-' + p.p + '">' + p.p + '</span>' +
+      '<span style="font-weight:500;cursor:pointer;color:#5aabdd;width:150px" onclick="UI.playerModal(' + p.id + ')">' + esc(p.n) + '</span>' +
+      '<span style="flex:1;font-size:11px;color:var(--text2)">' + esc(clubName) + ' · ' + esc(this.leagueOf(p)) + '</span>' +
+      '<span style="font-size:10px;color:var(--text2);width:26px">' + p.age + 'y</span>' +
+      '<span class="rat" style="margin:0 6px">' + p.r + '</span>' +
+      '<span style="font-size:11px;width:56px;text-align:right">' + money(p.val) + '</span>' +
+      '<button class="btn sm pri" style="margin-left:8px" onclick="UI.openNegotiation(' + p.id + ')">Bid</button></div>';
+  },
   renderTransfers() {
-    ['buy', 'free', 'sell'].forEach(k => { gid('tr-t-' + k).className = 'tab' + (k === this.trTabSel ? ' on' : ''); });
+    ['buy', 'wonder', 'free', 'sell'].forEach(k => { gid('tr-t-' + k).className = 'tab' + (k === this.trTabSel ? ' on' : ''); });
     const wn = winName();
     gid('tr-status').innerHTML = (wn ? '<span style="color:var(--green);font-weight:700">' + wn + ' is OPEN</span>' : '<span style="color:var(--red)">Transfer window closed — you can scout and plan, free agents can still be signed</span>') +
       ' · Budget: <strong style="color:#5aabdd">' + money(G.budget) + '</strong>' +
@@ -806,26 +817,40 @@ var UI = {
     const el = gid('tr-content');
     if (this.trTabSel === 'buy') {
       const posOpts = ['ALL', 'GK', 'RB', 'CB', 'LB', 'DM', 'CM', 'AM', 'RW', 'LW', 'ST'];
+      const lgOpts = ['ALL', 'Premier League', 'La Liga', 'Serie A', 'Bundesliga', 'Ligue 1', 'Other'];
       let html = '<div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap">' +
         '<input type="text" id="tr-search" placeholder="Search player or club..." value="' + esc(this.trSearch) + '" oninput="UI.trSearch=this.value;UI.renderTransfers()" style="background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:7px 12px;color:var(--text);font-family:inherit;width:220px">' +
-        '<select style="width:110px;margin:0" onchange="UI.trPos=this.value;UI.renderTransfers()">' +
-        posOpts.map(o => '<option' + (this.trPos === o ? ' selected' : '') + '>' + o + '</option>').join('') + '</select></div>';
+        '<select style="width:100px;margin:0" onchange="UI.trPos=this.value;UI.renderTransfers()">' +
+        posOpts.map(o => '<option' + (this.trPos === o ? ' selected' : '') + '>' + o + '</option>').join('') + '</select>' +
+        '<select style="width:150px;margin:0" onchange="UI.trLeague=this.value;UI.renderTransfers()">' +
+        lgOpts.map(o => '<option' + (this.trLeague === o ? ' selected' : '') + '>' + (o === 'ALL' ? 'All leagues' : o) + '</option>').join('') + '</select></div>';
       const q = this.trSearch.toLowerCase();
       let list = Object.values(PLAYERS).filter(p => !p.free && (p.foreign || (p.club && p.club !== G.club)));
       if (this.trPos !== 'ALL') list = list.filter(p => p.p === this.trPos);
+      if (this.trLeague !== 'ALL') list = list.filter(p => this.leagueOf(p) === this.trLeague);
       if (q) list = list.filter(p => p.n.toLowerCase().indexOf(q) >= 0 || (p.club ? CLUB_BY_KEY[p.club].name : p.clubName || '').toLowerCase().indexOf(q) >= 0);
       list.sort((a, b) => b.r - a.r);
-      html += '<div class="card" style="padding:8px 12px">' + list.slice(0, 50).map(p => {
-        const clubName = p.club ? CLUB_BY_KEY[p.club].name : p.clubName;
-        return '<div class="list-row"><span class="tag tag-' + p.p + '">' + p.p + '</span>' +
-          '<span style="font-weight:500;cursor:pointer;color:#5aabdd;width:150px" onclick="UI.playerModal(' + p.id + ')">' + esc(p.n) + '</span>' +
-          '<span style="flex:1;font-size:11px;color:var(--text2)">' + esc(clubName) + '</span>' +
-          '<span style="font-size:10px;color:var(--text2);width:26px">' + p.age + 'y</span>' +
-          '<span class="rat" style="margin:0 6px">' + p.r + '</span>' +
-          '<span style="font-size:11px;width:56px;text-align:right">' + money(p.val) + '</span>' +
-          '<button class="btn sm pri" style="margin-left:8px" onclick="UI.openNegotiation(' + p.id + ')">Bid</button></div>';
-      }).join('') + (list.length > 50 ? '<p style="font-size:11px;color:var(--text2);padding:6px 0">…' + (list.length - 50) + ' more — refine your search.</p>' : '') + '</div>';
+      html += '<div class="card" style="padding:8px 12px">' + list.slice(0, 50).map(p => this.marketRow(p)).join('') +
+        (list.length > 50 ? '<p style="font-size:11px;color:var(--text2);padding:6px 0">…' + (list.length - 50) + ' more — refine your search.</p>' : '') + '</div>';
       el.innerHTML = html;
+    } else if (this.trTabSel === 'wonder') {
+      // the world's best young talent: high ceilings, still rising
+      const kids = Object.values(PLAYERS)
+        .filter(p => p.club !== G.club && !p.free && p.age <= 21 && p.pot >= 85 && p.pot - p.r >= 4)
+        .sort((a, b) => b.pot - a.pot || a.age - b.age);
+      el.innerHTML = '<p style="font-size:11px;color:var(--text2);margin-bottom:10px">Scouts\' shortlist of the best players aged 21 and under. Scout a player to reveal his exact potential.</p>' +
+        '<div class="card" style="padding:8px 12px">' + kids.slice(0, 60).map(p => {
+          const known = p.scouted;
+          const potLbl = known ? p.pot : (p.pot >= 92 ? 'Generational' : p.pot >= 88 ? 'Elite' : 'High');
+          return '<div class="list-row"><span class="tag tag-' + p.p + '">' + p.p + '</span>' +
+            '<span style="font-weight:500;cursor:pointer;color:#5aabdd;width:150px" onclick="UI.playerModal(' + p.id + ')">' + esc(p.n) + '</span>' +
+            '<span style="flex:1;font-size:11px;color:var(--text2)">' + esc(p.club ? CLUB_BY_KEY[p.club].name : p.clubName) + ' · ' + esc(this.leagueOf(p)) + '</span>' +
+            '<span style="font-size:10px;color:var(--text2);width:26px">' + p.age + 'y</span>' +
+            '<span class="rat" style="margin:0 6px">' + p.r + '</span>' +
+            '<span style="font-size:11px;color:var(--gold);width:80px;text-align:right" title="Potential">🌟 ' + potLbl + '</span>' +
+            '<span style="font-size:11px;width:56px;text-align:right">' + money(p.val) + '</span>' +
+            '<button class="btn sm pri" style="margin-left:8px" onclick="UI.openNegotiation(' + p.id + ')">Bid</button></div>';
+        }).join('') + '</div>';
     } else if (this.trTabSel === 'free') {
       const frees = Object.values(PLAYERS).filter(p => p.free).sort((a, b) => b.r - a.r);
       el.innerHTML = '<div class="card" style="padding:8px 12px">' + (frees.length ? frees.map(p =>
