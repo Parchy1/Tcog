@@ -107,6 +107,12 @@ function startMatchState(fix) {
 const TRAIN_FX = {};
 TRAIN_OPTS.forEach(t => { TRAIN_FX[t.id] = t; });
 
+/* score in home-away order, matching the scoreboard */
+function scLine() {
+  const h = M.fix.home || M.fix.neutral;
+  return h ? M.score[0] + '-' + M.score[1] : M.score[1] + '-' + M.score[0];
+}
+
 /* simulate one minute; returns an array of event objects for the UI */
 function matchMinute() {
   const fix = M.fix, ev = [];
@@ -160,7 +166,7 @@ function matchMinute() {
       const ogName = pick(M.oppXI.filter(p => ['CB', 'RB', 'LB', 'GK'].indexOf(p.p) >= 0)).n;
       M.scorers.push({ side: 0, n: ogName + ' (og)', min: M.min });
       G.morale = clamp(G.morale + 2, 5, 100);
-      ev.push({ type: 'goal', side: 0, actor: ogName, outcome: 'og', text: '⚽ OWN GOAL! ' + ogName + ' turns it into his own net! ' + M.score[0] + '-' + M.score[1] });
+      ev.push({ type: 'goal', side: 0, actor: ogName, outcome: 'og', text: '⚽ OWN GOAL! ' + ogName + ' turns it into his own net! ' + scLine() });
     } else {
       const weights = attackers.map(p => Math.pow(Math.max(20, p.sho), 2));
       const total = weights.reduce((s, w) => s + w, 0);
@@ -178,7 +184,7 @@ function matchMinute() {
       }
       M.scorers.push({ side: 0, n: scorer.n, min: M.min, assist: assistName });
       G.morale = clamp(G.morale + 2, 5, 100);
-      ev.push({ type: 'goal', side: 0, actor: scorer.n, assist: assistName, outcome: 'goal', text: '⚽ GOAL! ' + scorer.n + ' scores' + (assistName ? ' (' + assistName + ')' : '') + '! ' + M.score[0] + '-' + M.score[1] });
+      ev.push({ type: 'goal', side: 0, actor: scorer.n, assist: assistName, outcome: 'goal', text: '⚽ GOAL! ' + scorer.n + ' scores' + (assistName ? ' (' + assistName + ')' : '') + '! ' + scLine() });
     }
   } else if (hit(cp)) {
     // ── opponent goal (VAR / own goal possible here too)
@@ -191,7 +197,7 @@ function matchMinute() {
       M.scorers.push({ side: 1, n: og.n + ' (og)', min: M.min });
       M.ratings[og.id] = Math.max(3.5, (M.ratings[og.id] || 6.5) - 1.0);
       G.morale = clamp(G.morale - 2, 5, 100);
-      ev.push({ type: 'oppgoal', side: 1, actor: og.n, outcome: 'og', text: '🥅 Disaster — ' + og.n + ' puts it into his own net. ' + M.score[0] + '-' + M.score[1] });
+      ev.push({ type: 'oppgoal', side: 1, actor: og.n, outcome: 'og', text: '🥅 Disaster — ' + og.n + ' puts it into his own net. ' + scLine() });
     } else {
       const oppF = M.oppXI.filter(p => ['ST', 'LW', 'RW', 'AM'].indexOf(p.p) >= 0);
       const sc = oppF.length ? pick(oppF) : M.oppXI[10];
@@ -200,7 +206,7 @@ function matchMinute() {
       M.scorers.push({ side: 1, n: sc.n, min: M.min });
       defenders.forEach(p => { M.ratings[p.id] = Math.max(4, (M.ratings[p.id] || 6.5) - 0.25); });
       G.morale = clamp(G.morale - 2, 5, 100);
-      ev.push({ type: 'oppgoal', side: 1, actor: sc.n, outcome: 'goal', text: '🥅 ' + fix.opp + ' score — ' + sc.n + '. ' + M.score[0] + '-' + M.score[1] });
+      ev.push({ type: 'oppgoal', side: 1, actor: sc.n, outcome: 'goal', text: '🥅 ' + fix.opp + ' score — ' + sc.n + '. ' + scLine() });
     }
   } else if (hit(0.0018) && attackers.length) {
     // ── penalty to us
@@ -213,7 +219,7 @@ function matchMinute() {
       M.ratings[taker.id] = Math.min(10, (M.ratings[taker.id] || 6.5) + 0.9);
       M.scorers.push({ side: 0, n: taker.n + ' (pen)', min: M.min });
       G.morale = clamp(G.morale + 2, 5, 100);
-      ev.push({ type: 'goal', side: 0, actor: taker.n, outcome: 'goal', pen: true, text: '⚽ GOAL! ' + taker.n + ' converts the penalty! ' + M.score[0] + '-' + M.score[1] });
+      ev.push({ type: 'goal', side: 0, actor: taker.n, outcome: 'goal', pen: true, text: '⚽ GOAL! ' + taker.n + ' converts the penalty! ' + scLine() });
     } else {
       M.ratings[taker.id] = Math.max(4, (M.ratings[taker.id] || 6.5) - 0.5);
       const miss = pick([{ t: ' blazes the penalty over!', o: 'over' }, { t: "'s penalty is saved!", o: 'save' }, { t: ' hits the post from the spot!', o: 'post' }]);
@@ -231,7 +237,7 @@ function matchMinute() {
       if (taker.pid && PLAYERS[taker.pid]) { PLAYERS[taker.pid].g++; if (fix.comp === 'PL') PLAYERS[taker.pid].plG++; }
       M.scorers.push({ side: 1, n: taker.n + ' (pen)', min: M.min });
       G.morale = clamp(G.morale - 2, 5, 100);
-      ev.push({ type: 'oppgoal', side: 1, actor: taker.n, outcome: 'goal', pen: true, text: '🥅 ' + taker.n + ' scores from the spot. ' + M.score[0] + '-' + M.score[1] });
+      ev.push({ type: 'oppgoal', side: 1, actor: taker.n, outcome: 'goal', pen: true, text: '🥅 ' + taker.n + ' scores from the spot. ' + scLine() });
     } else {
       if (gk) M.ratings[gk.id] = Math.min(10, (M.ratings[gk.id] || 6.5) + 0.8);
       ev.push({ type: 'oppchance', side: 1, actor: taker.n, outcome: 'save', pen: true, text: '🧤 ' + (gk ? gk.n + ' SAVES the penalty!' : 'The penalty is missed!') });

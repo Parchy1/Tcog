@@ -47,8 +47,8 @@ function simPLRound(round, userResult) {
   matches.forEach(m => {
     if (m.h === G.club || m.a === G.club) {
       if (userResult) {
-        const ug = m.h === G.club ? userResult[0] : userResult[1];
-        const og = m.h === G.club ? userResult[1] : userResult[0];
+        // userResult is always [our goals, their goals], whatever the venue
+        const ug = userResult[0], og = userResult[1];
         applyTable(G.table, m.h, m.a, m.h === G.club ? ug : og, m.h === G.club ? og : ug);
         const oppKey = m.h === G.club ? m.a : m.h;
         pushForm(G.club, ug > og ? 'W' : ug === og ? 'D' : 'L');

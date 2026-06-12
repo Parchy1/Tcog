@@ -59,6 +59,10 @@ for (let s = 1; s <= seasons; s++) {
   const totalPts = tbl.reduce((x, r) => x + r.pts, 0);
   assert(totalPts >= 380 * 2 && totalPts <= 380 * 3, 'sane total points: ' + totalPts);
   assert(run('G.plW + G.plD + G.plL') === 38, 'user played 38 PL games');
+  // the league table row must agree with the user's own running tallies
+  assert(run('G.table[G.club].pts') === run('G.pts'), 'table points match user points: table=' + run('G.table[G.club].pts') + ' vs G.pts=' + run('G.pts'));
+  assert(run('G.table[G.club].w') === run('G.plW') && run('G.table[G.club].l') === run('G.plL'), 'table W/L match user W/L');
+  assert(run('G.table[G.club].gf') === run('G.plGF') && run('G.table[G.club].ga') === run('G.plGA'), 'table GF/GA match user GF/GA');
   assert(!Number.isNaN(pos) && pos >= 1 && pos <= 20, 'valid league position');
   // no NaN stats anywhere
   assert(run('Object.values(PLAYERS).every(p => Number.isFinite(p.r) && Number.isFinite(p.fit) && Number.isFinite(p.val))'), 'no NaN player stats');

@@ -401,6 +401,10 @@ var UI = {
     }, 100);
   },
   evQueue: [],
+  mScoreStr() {
+    const h = M.fix.home || M.fix.neutral;
+    return h ? M.score[0] + ' \u2014 ' + M.score[1] : M.score[1] + ' \u2014 ' + M.score[0];
+  },
   runLoop() {
     if (this.raf) cancelAnimationFrame(this.raf);
     const loop = () => {
@@ -427,7 +431,7 @@ var UI = {
         cancelAnimationFrame(this.raf); this.raf = null;
         gid('btn-ft').disabled = false;
         gid('btn-pause').disabled = true;
-        this.banner('', '⏱ Full time! ' + M.score[0] + ' — ' + M.score[1]);
+        this.banner('', '⏱ Full time! ' + this.mScoreStr());
         setTimeout(() => this.fullTime(), 900);
         return;
       }
@@ -499,7 +503,7 @@ var UI = {
     this.banner(e.side === 0 ? '' : 'danger', e.side === 0 ? '⚡ Chance building...' : '⚠️ ' + M.fix.opp + ' attack...');
     PITCH.playScene({ side: e.side || 0, outcome: e.outcome || 'wide', actor: e.actor, assist: e.assist, pen: e.pen }, () => {
       if (e.type === 'goal' || e.type === 'oppgoal') {
-        gid('m-score').textContent = M.score[0] + ' — ' + M.score[1];
+        gid('m-score').textContent = this.mScoreStr();
         gid('m-scorers-inline').textContent = M.scorers.filter(s => s.side === 0).map(s => s.n + ' ' + s.min + "'").join(' · ');
         this.banner(e.type === 'goal' ? 'goal' : 'danger', e.text);
         this.logMatch(e.type === 'goal' ? 'ml-goal' : 'ml-opp', mp + e.text);
@@ -553,7 +557,7 @@ var UI = {
 
   /* ═════════ HALF TIME ═════════ */
   showHalfTime() {
-    gid('ht-score').textContent = M.score[0] + ' — ' + M.score[1];
+    gid('ht-score').textContent = this.mScoreStr();
     gid('ht-scorers').textContent = M.scorers.length ? M.scorers.map(s => (s.side === 1 ? '(' + s.n + ')' : s.n) + ' ' + s.min + "'").join(' · ') : 'No goals';
     const talks = [
       { t: '🔥 Demand More', m: 6, eff: 0.04 },
@@ -647,7 +651,7 @@ var UI = {
     const fix = M.fix;
     gid('r-comp').textContent = this.compLabel(fix);
     gid('r-line').textContent = (fix.home || fix.neutral ? userClub().name + ' vs ' + fix.opp : fix.opp + ' vs ' + userClub().name);
-    gid('r-score').textContent = M.score[0] + ' — ' + M.score[1];
+    gid('r-score').textContent = this.mScoreStr();
     gid('r-note').textContent = M.decidedBy ? (M.out === 'W' ? 'Won ' : 'Lost ') + M.decidedBy + '!' : '';
     gid('r-scorers').textContent = M.scorers.length ? M.scorers.map(s => (s.side === 1 ? '(' + s.n + ')' : s.n) + ' ' + s.min + "'").join(' · ') : 'No goals.';
     gid('r-shots').textContent = M.shots[0] + '-' + M.shots[1];
