@@ -276,6 +276,15 @@ function addInbox(icon, msg, type) {
 
 /* ── XI helpers ──────────────────────────────────────────────── */
 function availableForSelection(p) { return !p.injured && p.susp <= 0 && !p.loan; }
+/* how well a player fits a lineup slot: 1 = natural, <1 = out of position */
+function posFitMult(slot, p) {
+  if (!slot || p.p === slot) return 1;
+  const ok = POS_OK[slot] || [slot];
+  const fi = ok.indexOf(p.p);
+  if (fi >= 0) return 1 - fi * 0.04;          // familiar secondary position
+  if (slot === 'GK' || p.p === 'GK') return 0.5; // outfielder in goal (or keeper outfield)
+  return 0.82;                                 // makeshift role
+}
 function autoPickXI() {
   const slots = FORM_SLOTS[G.tactic];
   G.xi = new Array(11).fill(null); G.bench = [];

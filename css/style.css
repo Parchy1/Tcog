@@ -127,6 +127,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;font-size:13px;color:var(--text
 .pnode.empty{background:var(--bg3);border-color:var(--border);color:var(--text2)}
 .pnode.tired{border-color:var(--amber)}.pnode.low{border-color:var(--red);background:rgba(192,57,43,.2)}
 .pnode.injd{border-color:#ff4444;background:rgba(255,68,68,.15)}
+.pnode.oop{border-style:dashed;border-color:var(--gold)}
 
 /* ── MATCH ───────────────────────────────────────── */
 .match-scoreline{background:var(--navy2);border:1px solid var(--border);border-radius:8px;padding:12px 16px;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between}

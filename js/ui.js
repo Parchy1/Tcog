@@ -230,16 +230,18 @@ var UI = {
     const xy = FORM_XY[G.tactic], slots = FORM_SLOTS[G.tactic];
     xy.forEach((pos, i) => {
       const pid = G.xi[i], pl = pid ? playerById(pid) : null;
+      const oop = pl && posFitMult(slots[i], pl) < 0.9;
       const d = document.createElement('div');
       let cls = 'pnode';
       if (!pl) cls += ' empty';
       else if (pl.injured) cls += ' injd';
       else if (pl.fit < 45) cls += ' low';
       else if (pl.fit < 70) cls += ' tired';
+      if (oop) cls += ' oop';
       d.className = cls;
       d.style.left = pos[0] + '%'; d.style.top = pos[1] + '%';
       d.textContent = pl ? pl.n.split(' ').pop().substring(0, 8) : (slots[i] || '?');
-      d.title = pl ? pl.n + ' · ' + pl.p + ' · Fit ' + pl.fit + '%' : slots[i];
+      d.title = pl ? pl.n + ' · ' + pl.p + ' · Fit ' + pl.fit + '%' + (oop ? ' · OUT OF POSITION at ' + slots[i] : '') : slots[i];
       d.onclick = () => this.openPicker(i);
       con.appendChild(d);
     });
@@ -273,28 +275,35 @@ var UI = {
   openPicker(target) {
     this.pickerTarget = target;
     const slot = target === 'bench' ? null : FORM_SLOTS[G.tactic][target];
-    gid('pk-lbl').textContent = slot ? 'Pick ' + slot : 'Pick bench player';
-    const ok = slot ? (POS_OK[slot] || [slot]) : null;
+    gid('pk-lbl').textContent = slot ? 'Pick ' + slot + ' — anyone can play here, best fits first' : 'Pick bench player';
     const inUse = {};
     G.xi.forEach((id, i) => { if (id && i !== target) inUse[id] = true; });
     G.bench.forEach(id => { inUse[id] = true; });
-    const avail = userSquad().filter(p => {
-      if (inUse[p.id] || p.susp > 0) return false;
-      if (ok) return ok.indexOf(p.p) >= 0;
-      return true;
-    }).sort((a, b) => b.r - a.r);
+    const avail = userSquad()
+      .filter(p => !inUse[p.id] && p.susp <= 0)
+      .sort((a, b) => {
+        const fa = slot ? posFitMult(slot, a) : 1, fb = slot ? posFitMult(slot, b) : 1;
+        return fb - fa || b.r - a.r;
+      });
     const list = gid('pk-list');
     list.innerHTML = '';
     avail.forEach(pl => {
+      const fitM = slot ? posFitMult(slot, pl) : 1;
+      const oop = fitM < 0.9;
       const row = document.createElement('div');
       row.className = 'list-row'; row.style.cursor = 'pointer';
-      row.innerHTML = '<span class="tag tag-' + pl.p + '">' + pl.p + '</span><span style="flex:1;font-weight:500">' + esc(pl.n) + '</span>' +
+      if (oop) row.style.opacity = '.75';
+      row.innerHTML = '<span class="tag tag-' + pl.p + '">' + pl.p + '</span><span style="flex:1;font-weight:500">' + esc(pl.n) +
+        (oop ? ' <span class="susp-badge" title="Out of position — will play below his rating">OOP</span>' : '') + '</span>' +
         (pl.injured ? '<span class="inj-badge">INJ</span>' : '<span style="font-size:11px;color:' + fitCol(pl.fit) + '">' + pl.fit + '%</span>') +
-        '<span class="rat" style="margin-left:6px">' + pl.r + '</span>';
+        '<span class="rat" style="margin-left:6px">' + (oop ? Math.round(pl.r * fitM) + '<span style="color:var(--text2);font-weight:400">/' + pl.r + '</span>' : pl.r) + '</span>';
       row.onclick = () => {
         if (pl.injured) { toast(pl.n + ' is injured.'); return; }
         if (this.pickerTarget === 'bench') G.bench.push(pl.id);
-        else G.xi[this.pickerTarget] = pl.id;
+        else {
+          G.xi[this.pickerTarget] = pl.id;
+          if (oop) toast(pl.n + ' will play out of position at ' + slot + ' (effective ~' + Math.round(pl.r * fitM) + ').');
+        }
         this.closePicker(); this.drawPitchNodes(); this.renderBench();
       };
       list.appendChild(row);

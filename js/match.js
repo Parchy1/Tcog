@@ -41,31 +41,37 @@ function oppDef(xi) {
 }
 
 function calcUserAtk() {
-  const pls = M.playing.map(playerById).filter(Boolean);
-  if (!pls.length) return 70;
-  let sum = 0;
-  pls.forEach(p => {
+  const slots = FORM_SLOTS[G.tactic];
+  let sum = 0, count = 0;
+  M.playing.forEach((id, i) => {
+    const p = playerById(id);
+    if (!p) return;
     const f = M.fit[p.id] !== undefined ? M.fit[p.id] : p.fit;
-    // individual morale matters: a happy player plays above himself
-    sum += p.r * (0.62 + 0.38 * f / 100) * (0.93 + 0.10 * p.morale / 100);
+    // individual morale matters, and out-of-position players play below themselves
+    sum += p.r * posFitMult(slots[i], p) * (0.62 + 0.38 * f / 100) * (0.93 + 0.10 * p.morale / 100);
+    count++;
   });
-  let avg = sum / pls.length;
+  if (!count) return 70;
+  let avg = sum / count;
   const mm = { att: 1.08, def: 0.92, ctr: 0.96, pos: 1.02, bal: 1 }[G.mentality] || 1;
   const sm = { press: 1.05, long: 0.96, wing: 1.03, tiki: 1.02, direct: 1 }[G.style] || 1;
   const morale = G.morale >= 75 ? 1.05 : G.morale <= 40 ? 0.92 : 1;
   return avg * mm * sm * morale * (1 + (G.pressing - 5) * 0.012) * (1 + (G.width - 5) * 0.004)
-    * (1 + G.instrs.length * 0.008) * (1 - (11 - pls.length) * 0.05);
+    * (1 + G.instrs.length * 0.008) * (1 - (11 - count) * 0.05);
 }
 function calcUserDef() {
-  const defs = M.playing.map(playerById).filter(p => p && ['CB', 'GK', 'LB', 'RB', 'DM'].indexOf(p.p) >= 0);
-  if (!defs.length) return 65;
-  let sum = 0;
-  defs.forEach(p => {
+  const slots = FORM_SLOTS[G.tactic];
+  let sum = 0, count = 0;
+  M.playing.forEach((id, i) => {
+    const p = playerById(id);
+    if (!p || ['CB', 'GK', 'LB', 'RB', 'DM', 'WB'].indexOf(slots[i]) < 0) return;
     const f = M.fit[p.id] !== undefined ? M.fit[p.id] : p.fit;
-    sum += p.def * (0.62 + 0.38 * f / 100);
+    sum += p.def * posFitMult(slots[i], p) * (0.62 + 0.38 * f / 100);
+    count++;
   });
+  if (!count) return 65;
   const mm = G.mentality === 'def' ? 1.08 : G.mentality === 'att' ? 0.93 : 1;
-  return (sum / defs.length) * mm * (1 + (G.defLine - 5) * 0.008);
+  return (sum / count) * mm * (1 + (G.defLine - 5) * 0.008);
 }
 
 /* how the opponent will set up against you */
@@ -130,8 +136,15 @@ function matchMinute() {
   if (M.min > 89) { gp *= 1.18; cp *= 1.18; } // stoppage-time chaos
   gp = clamp(gp, 0.004, 0.11); cp = clamp(cp, 0.003, 0.11);
 
-  const attackers = M.playing.map(playerById).filter(p => p && ['ST', 'LW', 'RW', 'AM', 'CM'].indexOf(p.p) >= 0);
-  const defenders = M.playing.map(playerById).filter(p => p && ['GK', 'CB', 'RB', 'LB', 'DM'].indexOf(p.p) >= 0);
+  // roles follow the slot a player occupies, not just his natural position
+  const slots = FORM_SLOTS[G.tactic];
+  const attackers = [], defenders = [];
+  M.playing.forEach((id, i) => {
+    const p = playerById(id);
+    if (!p) return;
+    if (['ST', 'CF', 'LW', 'RW', 'AM', 'CM', 'RM', 'LM'].indexOf(slots[i]) >= 0) attackers.push(p);
+    if (['GK', 'CB', 'RB', 'LB', 'DM', 'WB'].indexOf(slots[i]) >= 0) defenders.push(p);
+  });
   const r = Math.random();
   let acc = 0;
   const hit = (p) => { const lo = acc; acc += p; return r >= lo && r < acc; };
@@ -209,7 +222,7 @@ function matchMinute() {
     const oppF = M.oppXI.filter(p => ['ST', 'AM'].indexOf(p.p) >= 0);
     const taker = oppF.length ? oppF.slice().sort((a, b) => b.sho - a.sho)[0] : M.oppXI[10];
     M.shots[1]++; M.xg[1] += 0.76;
-    const gk = M.playing.map(playerById).find(p => p && p.p === 'GK');
+    const gk = playerById(M.playing[0]); // whoever is in goal, even an outfielder
     ev.push({ type: 'oppchance', side: 1, text: '⚠️ Penalty to ' + fix.opp + '! ' + taker.n + ' steps up...' });
     if (Math.random() < 0.72) {
       M.score[1]++;
@@ -229,7 +242,7 @@ function matchMinute() {
   } else if (hit(0.025)) {
     // ── opponent chance
     M.shots[1]++; M.xg[1] += rndf(0.04, 0.18);
-    const gk = M.playing.map(playerById).find(p => p && p.p === 'GK');
+    const gk = playerById(M.playing[0]); // whoever is in goal, even an outfielder
     if (gk && Math.random() < 0.5) M.ratings[gk.id] = Math.min(10, (M.ratings[gk.id] || 6.5) + 0.15);
     ev.push({ type: 'oppchance', side: 1, text: '⚠️ ' + fix.opp + ' threaten' + (gk ? ' — great save by ' + gk.n + '!' : '!') });
   } else if (hit(0.008)) {
