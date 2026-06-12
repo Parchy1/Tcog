@@ -7,7 +7,7 @@ const vm = require('vm');
 
 const ctx = { console, Math, Date, JSON, Object, Array, Number, String };
 vm.createContext(ctx);
-['util.js', 'data.js', 'core.js', 'sim.js', 'match.js'].forEach(f => {
+['util.js', 'data.js', 'fixtures2526.js', 'core.js', 'sim.js', 'match.js'].forEach(f => {
   const code = fs.readFileSync(path.join(__dirname, '..', 'js', f), 'utf8');
   vm.runInContext(code, ctx, { filename: f });
 });

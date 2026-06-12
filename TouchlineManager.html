@@ -731,8 +731,8 @@ const CLUBS = [
   { key: 'BOU', name: 'Bournemouth',    full: 'AFC Bournemouth',     stadium: 'Vitality Stadium',  col1: '#da291c', col2: '#000000', str: 75, bud: 40,  exp: 'Mid-table',  euro: null },
   { key: 'SUN', name: 'Sunderland',     full: 'Sunderland',          stadium: 'Stadium of Light',  col1: '#eb172b', col2: '#ffffff', str: 71, bud: 60,  exp: 'Avoid relegation', euro: null },
   { key: 'LEE', name: 'Leeds',          full: 'Leeds United',        stadium: 'Elland Road',       col1: '#ffffff', col2: '#1d428a', str: 70, bud: 45,  exp: 'Avoid relegation', euro: null },
-  { key: 'IPS', name: 'Ipswich',        full: 'Ipswich Town',        stadium: 'Portman Road',      col1: '#0044a9', col2: '#ffffff', str: 67, bud: 35,  exp: 'Avoid relegation', euro: null },
-  { key: 'SOU', name: 'Southampton',    full: 'Southampton',         stadium: "St. Mary's",        col1: '#d71920', col2: '#ffffff', str: 65, bud: 30,  exp: 'Avoid relegation', euro: null }
+  { key: 'WOL', name: 'Wolves',         full: 'Wolverhampton Wanderers', stadium: 'Molineux',      col1: '#fdb913', col2: '#231f20', str: 71, bud: 45,  exp: 'Avoid relegation', euro: null },
+  { key: 'BUR', name: 'Burnley',        full: 'Burnley',             stadium: 'Turf Moor',         col1: '#6c1d45', col2: '#99d6ea', str: 68, bud: 35,  exp: 'Avoid relegation', euro: null }
 ];
 const CLUB_BY_KEY = {}; CLUBS.forEach(c => { CLUB_BY_KEY[c.key] = c; });
 /* pristine snapshot so a new career resets any promotion/relegation rebranding */
@@ -741,8 +741,8 @@ const EXP_POS = { 'Win the league': 1, 'Top 4': 4, 'Top 6': 6, 'Top half': 10, '
 
 /* Championship clubs that can be promoted to replace relegated sides */
 const CHAMPIONSHIP = [
-  { name: 'Wolves',        full: 'Wolverhampton Wanderers', stadium: 'Molineux',           col1: '#fdb913', col2: '#231f20', str: 70, bud: 45, exp: 'Mid-table' },
-  { name: 'Burnley',       full: 'Burnley',                 stadium: 'Turf Moor',          col1: '#6c1d45', col2: '#99d6ea', str: 67, bud: 40, exp: 'Avoid relegation' },
+  { name: 'Ipswich',       full: 'Ipswich Town',            stadium: 'Portman Road',       col1: '#0044a9', col2: '#ffffff', str: 67, bud: 35, exp: 'Avoid relegation' },
+  { name: 'Southampton',   full: 'Southampton',             stadium: "St. Mary's",         col1: '#d71920', col2: '#ffffff', str: 66, bud: 30, exp: 'Avoid relegation' },
   { name: 'Birmingham',    full: 'Birmingham City',         stadium: "St Andrew's",        col1: '#0000fe', col2: '#ffffff', str: 67, bud: 50, exp: 'Avoid relegation' },
   { name: 'Wrexham',       full: 'Wrexham AFC',             stadium: 'Racecourse Ground',  col1: '#d2010d', col2: '#ffffff', str: 66, bud: 45, exp: 'Avoid relegation' },
   { name: 'Sheffield Utd', full: 'Sheffield United',        stadium: 'Bramall Lane',       col1: '#ee2737', col2: '#ffffff', str: 66, bud: 38, exp: 'Avoid relegation' },
@@ -781,8 +781,8 @@ const STARS = {
   BOU: [['Petrovic','GK',80,26],['Senesi','CB',81,28],['Diakite','CB',78,24],['Smith','RB',78,22],['Truffert','LB',79,24],['Adams','DM',79,29],['Scott','CM',78,22],['Christie','CM',78,30],['Kluivert','AM',82,26],['Semenyo','LW',84,25],['Brooks','RW',78,28],['Evanilson','ST',81,26],['Kroupi','ST',76,19]],
   SUN: [['Roefs','GK',76,22],['Ballard','CB',77,26],['Mukiele','CB',78,28],['Hume','RB',77,23],['Reinildo','LB',76,31],['Xhaka','CM',82,33],['Sadiki','CM',75,21],['Le Fee','AM',78,25],['Adingra','RW',78,23],['Talbi','LW',77,22],['Isidor','ST',76,25],['Mayenda','ST',75,20]],
   LEE: [['Perri','GK',76,25],['Struijk','CB',77,26],['Rodon','CB',76,28],['Bogle','RB',75,25],['Gudmundsson','LB',74,28],['Ampadu','DM',77,25],['Stach','CM',77,27],['Aaronson','AM',76,25],['Gnonto','RW',77,22],['James','LW',76,28],['Calvert-Lewin','ST',77,28],['Nmecha','ST',75,27]],
-  IPS: [['Walton','GK',73,26],['Greaves','CB',75,24],['Burgess','CB',73,29],['Johnson','RB',73,26],['Davis','LB',74,30],['Morsy','CM',73,34],['Cajuste','CM',74,26],['Taylor','CM',72,25],['Hutchinson','RW',76,22],['Clarke','LW',74,25],['Philogene','LW',75,23],['Hirst','ST',74,26]],
-  SOU: [['Bazunu','GK',73,24],['Harwood-Bellis','CB',75,23],['Stephens','CB',71,31],['Sugawara','RB',73,25],['Manning','LB',72,29],['Downes','DM',75,26],['Aribo','CM',73,29],['Ugochukwu','CM',73,21],['Dibling','AM',76,19],['Fernandes','RW',74,21],['Armstrong','LW',73,28],['Stewart','ST',73,28],['Archer','ST',73,24]]
+  WOL: [['Jose Sa','GK',80,32],['Johnstone','GK',77,32],['Agbadou','CB',79,28],['Toti','CB',78,26],['S.Bueno','CB',78,26],['Hoever','RB',76,23],['H.Bueno','LB',77,22],['Andre','DM',81,24],['J.Gomes','CM',82,24],['Bellegarde','AM',79,27],['Arias','RW',80,27],['Munetsi','AM',78,29],['Strand Larsen','ST',82,25],['Hwang','ST',77,29],['Arokodare','ST',77,24]],
+  BUR: [['Dubravka','GK',78,36],['Esteve','CB',78,25],['Tuanzebe','CB',75,27],['Walker','RB',78,35],['Hartman','LB',77,23],['Cullen','CM',77,29],['Ugochukwu','DM',76,21],['Florentino','DM',77,26],['Anthony','RW',78,25],['Bruun Larsen','LW',78,26],['Tchaouna','LW',76,22],['Foster','ST',77,22],['Flemming','ST',77,30]]
 };
 // remove the placeholder bad row in WHU
 STARS.WHU = STARS.WHU.filter(s => s[2] > 1);
@@ -939,7 +939,7 @@ const EURO_CFG = {
 /* Cups */
 const FA_ROUNDS = ['R3', 'R4', 'R5', 'QF', 'SF', 'F'];
 const LC_ROUNDS = ['R2', 'R3', 'R4', 'QF', 'SF', 'F'];
-const LOWER_LEAGUE = { 'Accrington': 48, 'Wrexham': 60, 'Birmingham': 64, 'Coventry': 66, 'Norwich': 65, 'West Brom': 66, 'Middlesbrough': 65, 'Hull': 62, 'Preston': 61, 'Luton': 60, 'Wycombe': 52, 'Stockport': 55, 'Bradford': 53, 'Walsall': 50, 'Burnley': 67, 'Sheffield Utd': 66, 'Wolves': 72, 'Cardiff': 58, 'Plymouth': 56, 'Oxford': 58 };
+const LOWER_LEAGUE = { 'Accrington': 48, 'Wrexham': 60, 'Birmingham': 64, 'Coventry': 66, 'Norwich': 65, 'West Brom': 66, 'Middlesbrough': 65, 'Hull': 62, 'Preston': 61, 'Luton': 60, 'Wycombe': 52, 'Stockport': 55, 'Bradford': 53, 'Walsall': 50, 'Ipswich': 66, 'Sheffield Utd': 66, 'Southampton': 65, 'Cardiff': 58, 'Plymouth': 56, 'Oxford': 58 };
 
 /* Formations */
 const FORM_SLOTS = {
@@ -1023,6 +1023,54 @@ const SHOUT_EFFECTS = {
   tactics:   { morale: 1, eff: 0.01, msg: '🎯 Sticking to the plan.' },
   express:   { morale: 3, eff: 0.04, msg: '🌟 Expressing themselves!' }
 };
+
+
+/* ── fixtures2526.js — the real 2025/26 Premier League fixture list ──
+   All 380 fixtures in their true matchday order, with real matchday
+   date offsets from the Aug 15 2025 opener (source: openfootball). */
+'use strict';
+
+const REAL_ROUNDS_2526 = [
+  [["LIV","BOU"],["AVL","NEW"],["BHA","FUL"],["SUN","WHU"],["TOT","BUR"],["WOL","MCI"],["NFO","BRE"],["CHE","CRY"],["MUN","ARS"],["LEE","EVE"]],
+  [["WHU","CHE"],["MCI","TOT"],["BOU","WOL"],["BRE","AVL"],["BUR","SUN"],["ARS","LEE"],["CRY","NFO"],["EVE","BHA"],["FUL","MUN"],["NEW","LIV"]],
+  [["CHE","FUL"],["SUN","BRE"],["MUN","BUR"],["TOT","BOU"],["WOL","EVE"],["LEE","NEW"],["BHA","MCI"],["NFO","WHU"],["LIV","ARS"],["AVL","CRY"]],
+  [["ARS","NFO"],["BOU","BHA"],["CRY","SUN"],["EVE","AVL"],["FUL","LEE"],["NEW","WOL"],["WHU","TOT"],["BRE","CHE"],["BUR","LIV"],["MCI","MUN"]],
+  [["LIV","EVE"],["BHA","TOT"],["BUR","NFO"],["WHU","CRY"],["WOL","LEE"],["MUN","CHE"],["FUL","BRE"],["BOU","NEW"],["SUN","AVL"],["ARS","MCI"]],
+  [["BRE","MUN"],["CRY","LIV"],["CHE","BHA"],["LEE","BOU"],["MCI","BUR"],["NFO","SUN"],["TOT","WOL"],["AVL","FUL"],["NEW","ARS"],["EVE","WHU"]],
+  [["BOU","FUL"],["LEE","TOT"],["ARS","WHU"],["MUN","SUN"],["CHE","LIV"],["AVL","BUR"],["EVE","CRY"],["NEW","NFO"],["WOL","BHA"],["BRE","MCI"]],
+  [["NFO","CHE"],["BHA","NEW"],["CRY","BOU"],["BUR","LEE"],["MCI","EVE"],["SUN","WOL"],["FUL","ARS"],["TOT","AVL"],["LIV","MUN"],["WHU","BRE"]],
+  [["LEE","WHU"],["CHE","SUN"],["NEW","FUL"],["MUN","BHA"],["BRE","LIV"],["BOU","NFO"],["AVL","MCI"],["ARS","CRY"],["WOL","BUR"],["EVE","TOT"]],
+  [["BHA","LEE"],["CRY","BRE"],["BUR","ARS"],["FUL","WOL"],["NFO","MUN"],["TOT","CHE"],["LIV","AVL"],["WHU","NEW"],["MCI","BOU"],["SUN","EVE"]],
+  [["TOT","MUN"],["EVE","FUL"],["WHU","BUR"],["SUN","ARS"],["CHE","WOL"],["AVL","BOU"],["CRY","BHA"],["BRE","NEW"],["NFO","LEE"],["MCI","LIV"]],
+  [["BUR","CHE"],["BOU","WHU"],["BHA","BRE"],["FUL","SUN"],["LIV","NFO"],["WOL","CRY"],["NEW","MCI"],["LEE","AVL"],["ARS","TOT"],["MUN","EVE"]],
+  [["SUN","BOU"],["BRE","BUR"],["MCI","LEE"],["EVE","NEW"],["TOT","FUL"],["CRY","MUN"],["AVL","WOL"],["NFO","BHA"],["WHU","LIV"],["CHE","ARS"]],
+  [["BOU","EVE"],["FUL","MCI"],["NEW","TOT"],["BHA","AVL"],["ARS","BRE"],["BUR","CRY"],["WOL","NFO"],["LIV","SUN"],["LEE","CHE"],["MUN","WHU"]],
+  [["AVL","ARS"],["BOU","CHE"],["EVE","NFO"],["MCI","SUN"],["NEW","BUR"],["TOT","BRE"],["LEE","LIV"],["BHA","WHU"],["FUL","CRY"],["WOL","MUN"]],
+  [["CHE","EVE"],["LIV","BHA"],["BUR","FUL"],["ARS","WOL"],["SUN","NEW"],["CRY","MCI"],["NFO","TOT"],["WHU","AVL"],["BRE","LEE"],["MUN","BOU"]],
+  [["NEW","CHE"],["BOU","BUR"],["BHA","SUN"],["MCI","WHU"],["WOL","BRE"],["TOT","LIV"],["EVE","ARS"],["LEE","CRY"],["AVL","MUN"],["FUL","NFO"]],
+  [["MUN","NEW"],["NFO","MCI"],["ARS","BHA"],["BRE","BOU"],["BUR","EVE"],["LIV","WOL"],["WHU","FUL"],["CHE","AVL"],["SUN","LEE"],["CRY","TOT"]],
+  [["BUR","NEW"],["CHE","BOU"],["NFO","EVE"],["WHU","BHA"],["ARS","AVL"],["MUN","WOL"],["CRY","FUL"],["LIV","LEE"],["SUN","MCI"],["BRE","TOT"]],
+  [["AVL","NFO"],["BHA","BUR"],["WOL","WHU"],["BOU","ARS"],["LEE","MUN"],["EVE","BRE"],["NEW","CRY"],["TOT","SUN"],["FUL","LIV"],["MCI","CHE"]],
+  [["WHU","NFO"],["BOU","TOT"],["CRY","AVL"],["BRE","SUN"],["EVE","WOL"],["FUL","CHE"],["MCI","BHA"],["BUR","MUN"],["NEW","LEE"],["ARS","LIV"]],
+  [["MUN","MCI"],["SUN","CRY"],["CHE","BRE"],["LIV","BUR"],["LEE","FUL"],["TOT","WHU"],["NFO","ARS"],["WOL","NEW"],["AVL","EVE"],["BHA","BOU"]],
+  [["WHU","SUN"],["BUR","TOT"],["FUL","BHA"],["MCI","WOL"],["BOU","LIV"],["CRY","CHE"],["BRE","NFO"],["NEW","AVL"],["ARS","MUN"],["EVE","LEE"]],
+  [["BHA","EVE"],["LEE","ARS"],["WOL","BOU"],["CHE","WHU"],["LIV","NEW"],["AVL","BRE"],["MUN","FUL"],["NFO","CRY"],["TOT","MCI"],["SUN","BUR"]],
+  [["LEE","NFO"],["MUN","TOT"],["BOU","AVL"],["ARS","SUN"],["BUR","WHU"],["FUL","EVE"],["WOL","CHE"],["NEW","BRE"],["BHA","CRY"],["LIV","MCI"]],
+  [["CHE","LEE"],["EVE","BOU"],["TOT","NEW"],["WHU","MUN"],["AVL","BHA"],["MCI","FUL"],["NFO","WOL"],["CRY","BUR"],["SUN","LIV"],["BRE","ARS"]],
+  [["AVL","LEE"],["BRE","BHA"],["CHE","BUR"],["WHU","BOU"],["MCI","NEW"],["SUN","FUL"],["CRY","WOL"],["NFO","LIV"],["TOT","ARS"],["EVE","MUN"]],
+  [["WOL","AVL"],["BOU","SUN"],["BUR","BRE"],["LIV","WHU"],["NEW","EVE"],["LEE","MCI"],["BHA","NFO"],["FUL","TOT"],["MUN","CRY"],["ARS","CHE"]],
+  [["BOU","BRE"],["EVE","BUR"],["LEE","SUN"],["WOL","LIV"],["AVL","CHE"],["BHA","ARS"],["FUL","WHU"],["MCI","NFO"],["NEW","MUN"],["TOT","CRY"]],
+  [["SUN","BHA"],["BUR","BOU"],["ARS","EVE"],["CHE","NEW"],["WHU","MCI"],["CRY","LEE"],["MUN","AVL"],["NFO","FUL"],["LIV","TOT"],["BRE","WOL"]],
+  [["WOL","ARS"],["BOU","MUN"],["BHA","LIV"],["FUL","BUR"],["EVE","CHE"],["LEE","BRE"],["NEW","SUN"],["AVL","WHU"],["TOT","NFO"],["MCI","CRY"]],
+  [["WHU","WOL"],["ARS","BOU"],["BRE","EVE"],["BUR","BHA"],["LIV","FUL"],["SUN","TOT"],["CRY","NEW"],["NFO","AVL"],["CHE","MCI"],["MUN","LEE"]],
+  [["BRE","FUL"],["NEW","BOU"],["LEE","WOL"],["TOT","BHA"],["CHE","MUN"],["NFO","BUR"],["AVL","SUN"],["EVE","LIV"],["MCI","ARS"],["CRY","WHU"]],
+  [["BHA","CHE"],["BOU","LEE"],["BUR","MCI"],["SUN","NFO"],["FUL","AVL"],["LIV","CRY"],["WHU","EVE"],["WOL","TOT"],["ARS","NEW"],["MUN","BRE"]],
+  [["LEE","BUR"],["BRE","WHU"],["NEW","BHA"],["WOL","SUN"],["ARS","FUL"],["BOU","CRY"],["MUN","LIV"],["AVL","TOT"],["CHE","NFO"],["EVE","MCI"]],
+  [["LIV","CHE"],["SUN","MUN"],["BHA","WOL"],["FUL","BOU"],["MCI","BRE"],["CRY","EVE"],["BUR","AVL"],["NFO","NEW"],["WHU","ARS"],["TOT","LEE"]],
+  [["AVL","LIV"],["MUN","NFO"],["BRE","CRY"],["EVE","SUN"],["LEE","BHA"],["WOL","FUL"],["NEW","WHU"],["ARS","BUR"],["BOU","MCI"],["CHE","TOT"]],
+  [["SUN","CHE"],["BHA","MUN"],["CRY","ARS"],["BUR","WOL"],["FUL","NEW"],["LIV","BRE"],["MCI","AVL"],["NFO","BOU"],["TOT","EVE"],["WHU","LEE"]]
+];
+const REAL_ROUND_DAYS_2526 = [0, 7, 15, 29, 36, 43, 49, 64, 70, 78, 85, 99, 106, 109, 113, 120, 127, 133, 137, 141, 144, 155, 162, 169, 175, 179, 190, 196, 200, 211, 213, 238, 246, 249, 259, 267, 273, 282];
 
 
 /* ── core.js — game state, player/squad generation, calendar, save/load ── */
@@ -1131,8 +1179,11 @@ function genSquads() {
   });
 }
 
-/* ── fixtures: double round-robin (circle method) ────────────── */
-function buildRounds() {
+/* ── fixtures: real 2025/26 list in season 1, circle method after ── */
+function buildRounds(useReal) {
+  if (useReal && typeof REAL_ROUNDS_2526 !== 'undefined') {
+    return REAL_ROUNDS_2526.map(rd => rd.map(m => ({ h: m[0], a: m[1] })));
+  }
   const keys = shuffle(CLUBS.map(c => c.key));
   const n = keys.length, half = [];
   const arr = keys.slice(1);
@@ -1151,7 +1202,7 @@ function buildRounds() {
 }
 
 /* ── calendar ────────────────────────────────────────────────── */
-function buildCalendar(euroMds) {
+function buildCalendar(euroMds, roundDays) {
   const cal = [];
   const euroAfter = [4, 6, 8, 10, 12, 14, 16, 18].slice(0, euroMds);
   const lcAfter = { 3: 'R2', 7: 'R3', 12: 'R4', 17: 'QF', 22: 'SF', 27: 'F' };
@@ -1159,7 +1210,7 @@ function buildCalendar(euroMds) {
   const koAfter = { 24: 'po', 27: 'r16', 31: 'qf', 34: 'sf' };
   let md = 0;
   for (let r = 1; r <= 38; r++) {
-    const base = (r - 1) * 7;
+    const base = roundDays ? roundDays[r - 1] : (r - 1) * 7;
     cal.push({ t: 'PL', round: r, day: base });
     let off = 3;
     if (euroAfter.indexOf(r) >= 0) { md++; cal.push({ t: 'EU', md: md, day: base + off++ }); }
@@ -1168,7 +1219,7 @@ function buildCalendar(euroMds) {
     if (koAfter[r]) cal.push({ t: 'EUKO', phase: koAfter[r], day: base + off++ });
     if (r === 28) cal.push({ t: 'YOUTH', day: base + off++ });
   }
-  const endBase = 37 * 7;
+  const endBase = roundDays ? roundDays[37] : 37 * 7;
   cal.push({ t: 'FA', round: 'F', day: endBase + 6 });
   cal.push({ t: 'EUKO', phase: 'f', day: endBase + 13 });
   return cal;
@@ -1274,7 +1325,7 @@ function newGame(clubKey, managerName) {
   const club = CLUB_BY_KEY[clubKey];
   G = {
     club: clubKey, manager: managerName || 'The Gaffer', season: 1, ci: 0, lastDay: -3,
-    rounds: buildRounds(), calendar: null,
+    rounds: buildRounds(true), calendar: null,
     table: {}, results: [], userResults: [],
     budget: club.bud, morale: 70, boardConf: 65,
     tactic: '433', mentality: 'bal', style: 'direct', pressing: 7, defLine: 6, width: 6,
@@ -1290,7 +1341,7 @@ function newGame(clubKey, managerName) {
   };
   CLUBS.forEach(c => { G.table[c.key] = { p: 0, w: 0, d: 0, l: 0, gf: 0, ga: 0, pts: 0 }; });
   G.euro = buildEuro(club.euro);
-  G.calendar = buildCalendar(G.euro ? EURO_CFG[G.euro.comp].mds : 0);
+  G.calendar = buildCalendar(G.euro ? EURO_CFG[G.euro.comp].mds : 0, typeof REAL_ROUND_DAYS_2526 !== 'undefined' ? REAL_ROUND_DAYS_2526 : null);
   addInbox('👔', 'Welcome to ' + club.full + ', ' + G.manager + '! The board expects: ' + club.exp + '.', 'board');
   addInbox('💰', 'Transfer budget set at ' + money(G.budget) + '. The ' + (winName() || 'transfer window') + ' is open.', 'board');
   if (G.euro) addInbox(EURO_CFG[G.euro.comp].icon, 'We have qualified for the ' + EURO_CFG[G.euro.comp].label + ' league phase.', 'comp');
@@ -1438,6 +1489,7 @@ function loadGame() {
     const s = JSON.parse(raw);
     if (!s || !s.G || !s.PLAYERS) return false;
     G = s.G; PLAYERS = s.PLAYERS; NEXT_ID = s.NEXT_ID;
+    migrateClubKeys();
     // migrate older saves
     G.aiForm = G.aiForm || {};
     G.clubOverrides = G.clubOverrides || {};
@@ -1448,6 +1500,26 @@ function loadGame() {
     return true;
   } catch (e) { return false; }
 }
+/* saves from before the league correction used IPS/SOU where the real
+   2025/26 league has Wolves/Burnley — rename the keys throughout */
+function migrateClubKeys() {
+  const map = { IPS: 'WOL', SOU: 'BUR' };
+  if (!G.table || (!G.table.IPS && !G.table.SOU)) return;
+  const ren = k => map[k] || k;
+  const renObj = o => { const n = {}; Object.keys(o || {}).forEach(k => { n[ren(k)] = o[k]; }); return n; };
+  G.table = renObj(G.table);
+  G.aiForm = renObj(G.aiForm);
+  G.sackedMgrs = renObj(G.sackedMgrs);
+  G.clubOverrides = renObj(G.clubOverrides);
+  (G.rounds || []).forEach(r => r.forEach(m => { m.h = ren(m.h); m.a = ren(m.a); }));
+  (G.results || []).forEach(r => { r.h = ren(r.h); r.a = ren(r.a); });
+  (G.lastRelegated || []).forEach((k, i) => { G.lastRelegated[i] = ren(k); });
+  G.club = ren(G.club);
+  if (G.pendingJob) G.pendingJob = ren(G.pendingJob);
+  if (G.curFix && G.curFix.oppKey) G.curFix.oppKey = ren(G.curFix.oppKey);
+  Object.values(PLAYERS).forEach(p => { if (p.club) p.club = ren(p.club); });
+}
+
 function hasSave() {
   if (typeof localStorage === 'undefined') return false;
   try { return !!localStorage.getItem(SAVE_KEY); } catch (e) { return false; }

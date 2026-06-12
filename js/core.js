@@ -104,8 +104,11 @@ function genSquads() {
   });
 }
 
-/* ── fixtures: double round-robin (circle method) ────────────── */
-function buildRounds() {
+/* ── fixtures: real 2025/26 list in season 1, circle method after ── */
+function buildRounds(useReal) {
+  if (useReal && typeof REAL_ROUNDS_2526 !== 'undefined') {
+    return REAL_ROUNDS_2526.map(rd => rd.map(m => ({ h: m[0], a: m[1] })));
+  }
   const keys = shuffle(CLUBS.map(c => c.key));
   const n = keys.length, half = [];
   const arr = keys.slice(1);
@@ -124,7 +127,7 @@ function buildRounds() {
 }
 
 /* ── calendar ────────────────────────────────────────────────── */
-function buildCalendar(euroMds) {
+function buildCalendar(euroMds, roundDays) {
   const cal = [];
   const euroAfter = [4, 6, 8, 10, 12, 14, 16, 18].slice(0, euroMds);
   const lcAfter = { 3: 'R2', 7: 'R3', 12: 'R4', 17: 'QF', 22: 'SF', 27: 'F' };
@@ -132,7 +135,7 @@ function buildCalendar(euroMds) {
   const koAfter = { 24: 'po', 27: 'r16', 31: 'qf', 34: 'sf' };
   let md = 0;
   for (let r = 1; r <= 38; r++) {
-    const base = (r - 1) * 7;
+    const base = roundDays ? roundDays[r - 1] : (r - 1) * 7;
     cal.push({ t: 'PL', round: r, day: base });
     let off = 3;
     if (euroAfter.indexOf(r) >= 0) { md++; cal.push({ t: 'EU', md: md, day: base + off++ }); }
@@ -141,7 +144,7 @@ function buildCalendar(euroMds) {
     if (koAfter[r]) cal.push({ t: 'EUKO', phase: koAfter[r], day: base + off++ });
     if (r === 28) cal.push({ t: 'YOUTH', day: base + off++ });
   }
-  const endBase = 37 * 7;
+  const endBase = roundDays ? roundDays[37] : 37 * 7;
   cal.push({ t: 'FA', round: 'F', day: endBase + 6 });
   cal.push({ t: 'EUKO', phase: 'f', day: endBase + 13 });
   return cal;
@@ -247,7 +250,7 @@ function newGame(clubKey, managerName) {
   const club = CLUB_BY_KEY[clubKey];
   G = {
     club: clubKey, manager: managerName || 'The Gaffer', season: 1, ci: 0, lastDay: -3,
-    rounds: buildRounds(), calendar: null,
+    rounds: buildRounds(true), calendar: null,
     table: {}, results: [], userResults: [],
     budget: club.bud, morale: 70, boardConf: 65,
     tactic: '433', mentality: 'bal', style: 'direct', pressing: 7, defLine: 6, width: 6,
@@ -263,7 +266,7 @@ function newGame(clubKey, managerName) {
   };
   CLUBS.forEach(c => { G.table[c.key] = { p: 0, w: 0, d: 0, l: 0, gf: 0, ga: 0, pts: 0 }; });
   G.euro = buildEuro(club.euro);
-  G.calendar = buildCalendar(G.euro ? EURO_CFG[G.euro.comp].mds : 0);
+  G.calendar = buildCalendar(G.euro ? EURO_CFG[G.euro.comp].mds : 0, typeof REAL_ROUND_DAYS_2526 !== 'undefined' ? REAL_ROUND_DAYS_2526 : null);
   addInbox('👔', 'Welcome to ' + club.full + ', ' + G.manager + '! The board expects: ' + club.exp + '.', 'board');
   addInbox('💰', 'Transfer budget set at ' + money(G.budget) + '. The ' + (winName() || 'transfer window') + ' is open.', 'board');
   if (G.euro) addInbox(EURO_CFG[G.euro.comp].icon, 'We have qualified for the ' + EURO_CFG[G.euro.comp].label + ' league phase.', 'comp');
@@ -411,6 +414,7 @@ function loadGame() {
     const s = JSON.parse(raw);
     if (!s || !s.G || !s.PLAYERS) return false;
     G = s.G; PLAYERS = s.PLAYERS; NEXT_ID = s.NEXT_ID;
+    migrateClubKeys();
     // migrate older saves
     G.aiForm = G.aiForm || {};
     G.clubOverrides = G.clubOverrides || {};
@@ -421,6 +425,26 @@ function loadGame() {
     return true;
   } catch (e) { return false; }
 }
+/* saves from before the league correction used IPS/SOU where the real
+   2025/26 league has Wolves/Burnley — rename the keys throughout */
+function migrateClubKeys() {
+  const map = { IPS: 'WOL', SOU: 'BUR' };
+  if (!G.table || (!G.table.IPS && !G.table.SOU)) return;
+  const ren = k => map[k] || k;
+  const renObj = o => { const n = {}; Object.keys(o || {}).forEach(k => { n[ren(k)] = o[k]; }); return n; };
+  G.table = renObj(G.table);
+  G.aiForm = renObj(G.aiForm);
+  G.sackedMgrs = renObj(G.sackedMgrs);
+  G.clubOverrides = renObj(G.clubOverrides);
+  (G.rounds || []).forEach(r => r.forEach(m => { m.h = ren(m.h); m.a = ren(m.a); }));
+  (G.results || []).forEach(r => { r.h = ren(r.h); r.a = ren(r.a); });
+  (G.lastRelegated || []).forEach((k, i) => { G.lastRelegated[i] = ren(k); });
+  G.club = ren(G.club);
+  if (G.pendingJob) G.pendingJob = ren(G.pendingJob);
+  if (G.curFix && G.curFix.oppKey) G.curFix.oppKey = ren(G.curFix.oppKey);
+  Object.values(PLAYERS).forEach(p => { if (p.club) p.club = ren(p.club); });
+}
+
 function hasSave() {
   if (typeof localStorage === 'undefined') return false;
   try { return !!localStorage.getItem(SAVE_KEY); } catch (e) { return false; }

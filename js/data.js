@@ -23,8 +23,8 @@ const CLUBS = [
   { key: 'BOU', name: 'Bournemouth',    full: 'AFC Bournemouth',     stadium: 'Vitality Stadium',  col1: '#da291c', col2: '#000000', str: 75, bud: 40,  exp: 'Mid-table',  euro: null },
   { key: 'SUN', name: 'Sunderland',     full: 'Sunderland',          stadium: 'Stadium of Light',  col1: '#eb172b', col2: '#ffffff', str: 71, bud: 60,  exp: 'Avoid relegation', euro: null },
   { key: 'LEE', name: 'Leeds',          full: 'Leeds United',        stadium: 'Elland Road',       col1: '#ffffff', col2: '#1d428a', str: 70, bud: 45,  exp: 'Avoid relegation', euro: null },
-  { key: 'IPS', name: 'Ipswich',        full: 'Ipswich Town',        stadium: 'Portman Road',      col1: '#0044a9', col2: '#ffffff', str: 67, bud: 35,  exp: 'Avoid relegation', euro: null },
-  { key: 'SOU', name: 'Southampton',    full: 'Southampton',         stadium: "St. Mary's",        col1: '#d71920', col2: '#ffffff', str: 65, bud: 30,  exp: 'Avoid relegation', euro: null }
+  { key: 'WOL', name: 'Wolves',         full: 'Wolverhampton Wanderers', stadium: 'Molineux',      col1: '#fdb913', col2: '#231f20', str: 71, bud: 45,  exp: 'Avoid relegation', euro: null },
+  { key: 'BUR', name: 'Burnley',        full: 'Burnley',             stadium: 'Turf Moor',         col1: '#6c1d45', col2: '#99d6ea', str: 68, bud: 35,  exp: 'Avoid relegation', euro: null }
 ];
 const CLUB_BY_KEY = {}; CLUBS.forEach(c => { CLUB_BY_KEY[c.key] = c; });
 /* pristine snapshot so a new career resets any promotion/relegation rebranding */
@@ -33,8 +33,8 @@ const EXP_POS = { 'Win the league': 1, 'Top 4': 4, 'Top 6': 6, 'Top half': 10, '
 
 /* Championship clubs that can be promoted to replace relegated sides */
 const CHAMPIONSHIP = [
-  { name: 'Wolves',        full: 'Wolverhampton Wanderers', stadium: 'Molineux',           col1: '#fdb913', col2: '#231f20', str: 70, bud: 45, exp: 'Mid-table' },
-  { name: 'Burnley',       full: 'Burnley',                 stadium: 'Turf Moor',          col1: '#6c1d45', col2: '#99d6ea', str: 67, bud: 40, exp: 'Avoid relegation' },
+  { name: 'Ipswich',       full: 'Ipswich Town',            stadium: 'Portman Road',       col1: '#0044a9', col2: '#ffffff', str: 67, bud: 35, exp: 'Avoid relegation' },
+  { name: 'Southampton',   full: 'Southampton',             stadium: "St. Mary's",         col1: '#d71920', col2: '#ffffff', str: 66, bud: 30, exp: 'Avoid relegation' },
   { name: 'Birmingham',    full: 'Birmingham City',         stadium: "St Andrew's",        col1: '#0000fe', col2: '#ffffff', str: 67, bud: 50, exp: 'Avoid relegation' },
   { name: 'Wrexham',       full: 'Wrexham AFC',             stadium: 'Racecourse Ground',  col1: '#d2010d', col2: '#ffffff', str: 66, bud: 45, exp: 'Avoid relegation' },
   { name: 'Sheffield Utd', full: 'Sheffield United',        stadium: 'Bramall Lane',       col1: '#ee2737', col2: '#ffffff', str: 66, bud: 38, exp: 'Avoid relegation' },
@@ -73,8 +73,8 @@ const STARS = {
   BOU: [['Petrovic','GK',80,26],['Senesi','CB',81,28],['Diakite','CB',78,24],['Smith','RB',78,22],['Truffert','LB',79,24],['Adams','DM',79,29],['Scott','CM',78,22],['Christie','CM',78,30],['Kluivert','AM',82,26],['Semenyo','LW',84,25],['Brooks','RW',78,28],['Evanilson','ST',81,26],['Kroupi','ST',76,19]],
   SUN: [['Roefs','GK',76,22],['Ballard','CB',77,26],['Mukiele','CB',78,28],['Hume','RB',77,23],['Reinildo','LB',76,31],['Xhaka','CM',82,33],['Sadiki','CM',75,21],['Le Fee','AM',78,25],['Adingra','RW',78,23],['Talbi','LW',77,22],['Isidor','ST',76,25],['Mayenda','ST',75,20]],
   LEE: [['Perri','GK',76,25],['Struijk','CB',77,26],['Rodon','CB',76,28],['Bogle','RB',75,25],['Gudmundsson','LB',74,28],['Ampadu','DM',77,25],['Stach','CM',77,27],['Aaronson','AM',76,25],['Gnonto','RW',77,22],['James','LW',76,28],['Calvert-Lewin','ST',77,28],['Nmecha','ST',75,27]],
-  IPS: [['Walton','GK',73,26],['Greaves','CB',75,24],['Burgess','CB',73,29],['Johnson','RB',73,26],['Davis','LB',74,30],['Morsy','CM',73,34],['Cajuste','CM',74,26],['Taylor','CM',72,25],['Hutchinson','RW',76,22],['Clarke','LW',74,25],['Philogene','LW',75,23],['Hirst','ST',74,26]],
-  SOU: [['Bazunu','GK',73,24],['Harwood-Bellis','CB',75,23],['Stephens','CB',71,31],['Sugawara','RB',73,25],['Manning','LB',72,29],['Downes','DM',75,26],['Aribo','CM',73,29],['Ugochukwu','CM',73,21],['Dibling','AM',76,19],['Fernandes','RW',74,21],['Armstrong','LW',73,28],['Stewart','ST',73,28],['Archer','ST',73,24]]
+  WOL: [['Jose Sa','GK',80,32],['Johnstone','GK',77,32],['Agbadou','CB',79,28],['Toti','CB',78,26],['S.Bueno','CB',78,26],['Hoever','RB',76,23],['H.Bueno','LB',77,22],['Andre','DM',81,24],['J.Gomes','CM',82,24],['Bellegarde','AM',79,27],['Arias','RW',80,27],['Munetsi','AM',78,29],['Strand Larsen','ST',82,25],['Hwang','ST',77,29],['Arokodare','ST',77,24]],
+  BUR: [['Dubravka','GK',78,36],['Esteve','CB',78,25],['Tuanzebe','CB',75,27],['Walker','RB',78,35],['Hartman','LB',77,23],['Cullen','CM',77,29],['Ugochukwu','DM',76,21],['Florentino','DM',77,26],['Anthony','RW',78,25],['Bruun Larsen','LW',78,26],['Tchaouna','LW',76,22],['Foster','ST',77,22],['Flemming','ST',77,30]]
 };
 // remove the placeholder bad row in WHU
 STARS.WHU = STARS.WHU.filter(s => s[2] > 1);
@@ -231,7 +231,7 @@ const EURO_CFG = {
 /* Cups */
 const FA_ROUNDS = ['R3', 'R4', 'R5', 'QF', 'SF', 'F'];
 const LC_ROUNDS = ['R2', 'R3', 'R4', 'QF', 'SF', 'F'];
-const LOWER_LEAGUE = { 'Accrington': 48, 'Wrexham': 60, 'Birmingham': 64, 'Coventry': 66, 'Norwich': 65, 'West Brom': 66, 'Middlesbrough': 65, 'Hull': 62, 'Preston': 61, 'Luton': 60, 'Wycombe': 52, 'Stockport': 55, 'Bradford': 53, 'Walsall': 50, 'Burnley': 67, 'Sheffield Utd': 66, 'Wolves': 72, 'Cardiff': 58, 'Plymouth': 56, 'Oxford': 58 };
+const LOWER_LEAGUE = { 'Accrington': 48, 'Wrexham': 60, 'Birmingham': 64, 'Coventry': 66, 'Norwich': 65, 'West Brom': 66, 'Middlesbrough': 65, 'Hull': 62, 'Preston': 61, 'Luton': 60, 'Wycombe': 52, 'Stockport': 55, 'Bradford': 53, 'Walsall': 50, 'Ipswich': 66, 'Sheffield Utd': 66, 'Southampton': 65, 'Cardiff': 58, 'Plymouth': 56, 'Oxford': 58 };
 
 /* Formations */
 const FORM_SLOTS = {
