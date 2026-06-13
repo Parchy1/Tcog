@@ -373,8 +373,12 @@ var UI = {
     startMatchState(fix);
     this.speed = 1; this.paused = false; this.minTimer = 0; this.htShown = false;
     const me = userClub();
-    gid('m-home').textContent = fix.home || fix.neutral ? me.name : fix.opp;
-    gid('m-away').textContent = fix.home || fix.neutral ? fix.opp : me.name;
+    const isHome = fix.home || fix.neutral;
+    const oppCol = fix.oppKey ? CLUB_BY_KEY[fix.oppKey].col1 : '#8a8a8a';
+    gid('m-home').textContent = isHome ? me.name : fix.opp;
+    gid('m-away').textContent = isHome ? fix.opp : me.name;
+    gid('m-home-chip').style.background = isHome ? me.col1 : oppCol;
+    gid('m-away-chip').style.background = isHome ? oppCol : me.col1;
     gid('m-comp').textContent = this.compLabel(fix);
     gid('m-venue').textContent = fix.neutral ? 'Wembley Stadium' : fix.home ? me.stadium : 'Away — ' + fix.opp;
     gid('m-score').textContent = '0 — 0';

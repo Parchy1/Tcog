@@ -203,15 +203,13 @@
   <div class="match-layout">
     <div>
       <div class="match-scoreline">
-        <div><div class="match-team" id="m-home">—</div></div>
+        <div style="display:flex;align-items:center;gap:10px"><span class="team-chip" id="m-home-chip"></span><div class="match-team" id="m-home">—</div></div>
         <div style="text-align:center">
           <div class="match-score" id="m-score">0 — 0</div>
-          <div style="font-size:10px;color:var(--text2);margin-top:2px" id="m-scorers-inline"></div>
+          <div><span class="min-badge" id="m-min">0'</span></div>
+          <div style="font-size:10px;color:var(--text2);margin-top:3px" id="m-scorers-inline"></div>
         </div>
-        <div style="text-align:right">
-          <div class="match-team" id="m-away">—</div>
-          <div style="font-size:11px;color:var(--text2)" id="m-min">0'</div>
-        </div>
+        <div style="display:flex;align-items:center;gap:10px;justify-content:flex-end"><div class="match-team" id="m-away">—</div><span class="team-chip" id="m-away-chip"></span></div>
       </div>
       <div class="pitch-wrap" style="margin-bottom:10px">
         <canvas id="pitch-canvas" style="width:100%;display:block"></canvas>
